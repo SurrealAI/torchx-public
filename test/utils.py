@@ -12,6 +12,7 @@ from pprint import pprint
 import torchx as tx
 import torchx.utils as U
 from torchx.layers import*
+import torchx.nn as nnx
 
 
 def run_all_tests(globals_dict):
