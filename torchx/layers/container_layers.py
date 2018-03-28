@@ -1,8 +1,8 @@
 import torch.nn as nn
 
-from torchx.utils.shape import is_simple_shape
-from .layer import Layer, SameShapeAdapter
+from .core import Layer, SameShapeAdapter
 from .placeholder import PlaceholderStruct
+import torchx.utils as U
 
 
 class Sequential(Layer):
@@ -99,7 +99,7 @@ class TimeDistributed(Sequential):
         return x.contiguous().view(batch_size, seq_len, *new_remains)
 
     def get_output_shape(self, input_shape):
-        assert is_simple_shape(input_shape)
+        assert U.is_simple_shape(input_shape)
         assert len(input_shape) >= 3, \
             'TimeDistributed input_shape must be at least 3D (with batch dim)'
         batch_size, seq_len, *remains = input_shape

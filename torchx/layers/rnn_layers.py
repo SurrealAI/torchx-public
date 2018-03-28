@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
-
-from torchx.utils.shape import is_simple_shape, is_multi_shape
-from .layer import Layer
+from .core import Layer
+import torchx.utils as U
 
 
 # TODO: does not support Keras `stateful` parameter yet
@@ -165,11 +164,11 @@ class GetRNNOutput(Layer):
             return x
 
     def get_output_shape(self, input_shape):
-        if is_multi_shape(input_shape):
+        if U.is_multi_shape(input_shape):
             # input_shape is a nested tuple, means upstream return_state=True
             return input_shape[0]
         else:
-            assert is_simple_shape(input_shape)
+            assert U.is_simple_shape(input_shape)
             return input_shape
 
 
@@ -220,7 +219,7 @@ class GetRNNState(Layer):
                          'please set return_state=True in upstream RNN Layer')
 
     def get_output_shape(self, input_shape):
-        if is_multi_shape(input_shape):
+        if U.is_multi_shape(input_shape):
             # input_shape is a nested tuple, means upstream return_state=True
             if self.mode == 'h':
                 return input_shape[1]

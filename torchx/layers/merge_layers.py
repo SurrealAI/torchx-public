@@ -1,7 +1,6 @@
 import torch
 
 import torchx.utils as U
-from torchx.utils.shape import is_multi_shape, shape_equals
 from .core import Layer
 
 
@@ -15,7 +14,7 @@ class MergeLayer(Layer):
         pass
 
     def _check_shape(self, input_shape):
-        assert is_multi_shape(input_shape), \
+        assert U.is_multi_shape(input_shape), \
             self.__class__.__name__ + ' input_shape should be a sequence of tuples'
 
     __call__ = U.method_decorator(U.enable_varargs)(Layer.__call__)
@@ -62,7 +61,7 @@ class ElementwiseMerge(MergeLayer):
         self._check_shape(input_shape)
         shape_0 = input_shape[0]
         for shape in input_shape:
-            assert shape_equals(shape, shape_0), \
+            assert U.shape_equals(shape, shape_0), \
                 (self.__class__.__name__ +
                  ' must have the same shape for all input tensors')
         return shape_0

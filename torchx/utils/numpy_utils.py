@@ -30,6 +30,10 @@ def mean(numbers):
     return float(sum(numbers)) / max(len(numbers), 1)
 
 
+def product(array):
+    return np.asscalar(np.product(array))
+
+
 def ceildiv(a, b):
     """
     Ceiling division, equivalent to math.ceil(1.0*a/b) but much faster.

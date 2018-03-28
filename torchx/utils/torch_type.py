@@ -6,15 +6,7 @@ import torch
 from torch.autograd import Variable
 from torchx.gpu import GpuVariable
 from .numpy_utils import is_np_array, is_np_scalar, np_cast
-
-
-
-def numel(x):
-    return product(shape(x))
-
-
-def product(L):
-    return np.asscalar(np.prod(L))
+from .shape import numel
 
 
 def get_torch_type(x):

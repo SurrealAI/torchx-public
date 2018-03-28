@@ -1,10 +1,7 @@
-import torch.nn as nn
 import inspect
-
 import torch.nn as nn
-
 import torchx.utils as U
-from torchx.utils.shape import *
+from torchx.nn import Module
 from .placeholder import PlaceholderStruct
 
 _LAYER_REGISTRY = {}
@@ -41,7 +38,7 @@ def get_layer_registry():
     return _LAYER_REGISTRY
 
 
-class Layer(U.Module, metaclass=_LayerMeta):
+class Layer(Module, metaclass=_LayerMeta):
     """
     API is very similar to Keras sequential mode, used in `SequentialModel`
     https://keras.io/getting-started/sequential-model-guide/
@@ -86,13 +83,13 @@ class Layer(U.Module, metaclass=_LayerMeta):
                 'internal error, self.input_shape should have been set after build'
             return
         if self.input_shape is not None:
-            assert is_valid_shape(self.input_shape)
+            assert U.is_valid_shape(self.input_shape)
             if input_shape is not None:
                 assert tuple(input_shape) == tuple(self.input_shape), \
                     'self.input_shape has already been set, ' \
                     'must be the same as `input_shape` arg of build(input_shape)'
         else:
-            assert is_valid_shape(input_shape)
+            assert U.is_valid_shape(input_shape)
             self.input_shape = input_shape
         self._build(self.input_shape)
         self.is_built = True
@@ -188,7 +185,7 @@ def SameShapeAdapter(layer):
                 return layer(*self.init_args, **self.init_kwargs)
 
             def get_output_shape(self, input_shape):
-                assert is_simple_shape(input_shape)
+                assert U.is_simple_shape(input_shape)
                 return input_shape
 
         return _SameShapeAdapter

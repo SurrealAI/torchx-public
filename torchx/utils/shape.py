@@ -5,6 +5,7 @@ import math
 import numpy as np
 from functools import partial
 from .nested import recursive_map, recursive_combine, recursive_compare
+from .numpy_utils import product
 
 
 def is_simple_shape(shape):
@@ -48,7 +49,7 @@ def is_valid_shape(shape, *,
 def _get_shape(x):
     "single object"
     if isinstance(x, np.ndarray):
-        return x.shape
+        return tuple(x.shape)
     else:
         return tuple(x.size())
 
@@ -64,6 +65,14 @@ def get_shape(struct):
         is_base=None,
         leave_none=True
     )
+
+
+def numel(x):
+    """
+    Returns:
+        number of elements in tensor x. Name "numel" comes from Matlab
+    """
+    return product(_get_shape(x))
 
 
 def print_shape(struct, **kwargs):

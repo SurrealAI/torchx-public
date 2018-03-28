@@ -9,7 +9,6 @@ from collections import OrderedDict
 from .compute import th_clip_norm
 from torchx.gpu import get_scope_gpu
 from torchx.utils.common import SaveInitArgs
-import numpy as np
 
 
 def _net_or_parameters(net):
