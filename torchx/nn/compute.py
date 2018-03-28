@@ -1,15 +1,14 @@
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.autograd import Variable
-from torchx.utils import shape, to_float_tensor
+import torchx.utils as U
 
 
 def th_median(t):
     """
     Find median of entire tensor or Variable
     """
-    return to_float_tensor(t).view(-1).median(dim=0)[0][0]
+    return U.to_float_tensor(t).view(-1).median(dim=0)[0][0]
 
 
 def th_median_abs(t):
@@ -17,13 +16,13 @@ def th_median_abs(t):
 
 
 def th_ones_like(tensor):
-    s = shape(tensor)
+    s = U.get_shape(tensor)
     assert s is not None
     return torch.ones(s)
 
 
 def th_zeros_like(tensor):
-    s = shape(tensor)
+    s = U.get_shape(tensor)
     assert s is not None
     return torch.zeros(s)
 
@@ -54,8 +53,8 @@ def th_huber_loss_per_element(x, y=None, delta=1.0):
         x = x - y
     x_abs = x.abs()
     return th_where(x_abs < delta,
-                       0.5 * x * x,
-                       delta * (x_abs - 0.5 * delta))
+                    0.5 * x * x,
+                    delta * (x_abs - 0.5 * delta))
 
 
 def th_norm(tensor, norm_type=2):

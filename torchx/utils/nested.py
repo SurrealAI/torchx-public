@@ -170,7 +170,7 @@ def recursive_reduce(struct,
         return _unknown_type_handler(struct, unknown_type_handler)
 
 
-def flatten(struct, **kwargs):
+def recursive_flatten(struct, **kwargs):
     """
     Flattens base objects into a list
     """
@@ -293,9 +293,6 @@ def recursive_combine(*structs,
     assert len(structs) >= 1, 'must have at least one struct'
     s0 = structs[0]
     if is_base and is_base(s0):
-        for s in structs[1:]:
-            if not is_base(s):
-                raise StructureMismatch('should all be base object', s0, s)
         return combinator(structs)
     elif _is_sequence(s0, allow_any_seq_type):
         for s in structs[1:]:
@@ -360,6 +357,23 @@ def recursive_zip(*structs, **kwargs):
     )
 
 
+def recursive_binary_combine(struct1, struct2,
+                             *, combinator,
+                             **kwargs):
+    """
+    Binary version of `recursive_combine`. The only difference is that the
+    combinator function now takes 2 args and returns the combined value
+
+    Args:
+      combinator: (x, y) -> combined
+    """
+    return recursive_combine(
+        struct1, struct2,
+        combinator=lambda xy: combinator(xy[0], xy[1]),
+        **kwargs
+    )
+
+
 def recursive_compare(struct1, struct2,
                       comparator=None,
                       mode='all',
@@ -379,9 +393,9 @@ def recursive_compare(struct1, struct2,
     }
     assert mode in reducer
     reducer = reducer[mode]
-    cmp_results = recursive_combine(
+    cmp_results = recursive_binary_combine(
         struct1, struct2,
-        combinator=lambda xs: comparator(xs[0], xs[1]),
+        combinator=comparator,
         **kwargs
     )
     return reducer(cmp_results)

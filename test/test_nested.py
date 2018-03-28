@@ -142,7 +142,7 @@ def test_recursive_map():
     )
     assert ans == True
 
-    pprint(U.flatten(struct))
+    pp(U.recursive_flatten(struct))
 
 
 def test_recursive_combine():

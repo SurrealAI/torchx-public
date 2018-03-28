@@ -50,7 +50,7 @@ class Concat(MergeLayer):
         return tuple(out_shape)
 
     def __repr__(self):
-        return 'Concat({})'.format(self.input_shape)
+        return 'Concat{}'.format(tuple(self.input_shape))
 
 
 class ElementwiseMerge(MergeLayer):

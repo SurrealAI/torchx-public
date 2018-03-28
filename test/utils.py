@@ -7,13 +7,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from pprint import pprint
 
 import torchx as tx
 import torchx.utils as U
-from torchx.layers import*
+from torchx.layers import *
 import torchx.nn as nnx
 
+pp = pprint.pprint
 
 def run_all_tests(globals_dict):
     for k, v in globals_dict.items():
