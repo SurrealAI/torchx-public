@@ -26,7 +26,7 @@ class ConvNd(Layer):
         return self.conv(x)
 
     def get_output_shape(self, input_shape):
-        return U.infer_shape_convnd(
+        return U.shape_convnd(
             self.dim,
             input_shape,
             out_channels=self.out_channels,
@@ -75,7 +75,7 @@ class ConvTransposeNd(Layer):
         return self.conv_t(x)
 
     def get_output_shape(self, input_shape):
-        return U.infer_shape_transpose_convnd(
+        return U.shape_transpose_convnd(
             self.dim,
             input_shape,
             out_channels=self.out_channels,
@@ -119,7 +119,7 @@ class MaxPoolNd(Layer):
         return self.pool(x)
 
     def get_output_shape(self, input_shape):
-        return U.infer_shape_poolnd(
+        return U.shape_poolnd(
             self.dim,
             input_shape,
             kernel_size=self.kernel_size,
@@ -150,7 +150,7 @@ class AvgPoolNd(MaxPoolNd):
         self.PoolClass = [nn.AvgPool1d, nn.AvgPool2d, nn.AvgPool3d][dim - 1]
 
     def get_output_shape(self, input_shape):
-        return U.infer_shape_poolnd(
+        return U.shape_poolnd(
             self.dim,
             input_shape,
             kernel_size=self.kernel_size,

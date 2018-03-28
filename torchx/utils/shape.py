@@ -130,14 +130,14 @@ def _expands(dim, *xs):
     return map(lambda x: _expand(x), xs)
 
 
-def infer_shape_convnd(dim,
-                       input_shape,
-                       out_channels,
-                       kernel_size,
-                       stride=1,
-                       padding=0,
-                       dilation=1,
-                       has_batch=False):
+def shape_convnd(dim,
+                 input_shape,
+                 out_channels,
+                 kernel_size,
+                 stride=1,
+                 padding=0,
+                 dilation=1,
+                 has_batch=False):
     """
     http://pytorch.org/docs/nn.html#conv1d
     http://pytorch.org/docs/nn.html#conv2d
@@ -180,13 +180,13 @@ def infer_shape_convnd(dim,
     return ((batch,) if has_batch else ()) + (out_channels, *new_img_shape)
 
 
-def infer_shape_poolnd(dim,
-                       input_shape,
-                       kernel_size,
-                       stride=None,
-                       padding=0,
-                       dilation=1,
-                       has_batch=False):
+def shape_poolnd(dim,
+                 input_shape,
+                 kernel_size,
+                 stride=None,
+                 padding=0,
+                 dilation=1,
+                 has_batch=False):
     """
     The only difference from infer_shape_convnd is that `stride` default is None
     """
@@ -194,19 +194,19 @@ def infer_shape_poolnd(dim,
         out_channels = input_shape[1]
     else:
         out_channels = input_shape[0]
-    return infer_shape_convnd(dim, input_shape, out_channels,
-                              kernel_size, stride, padding, dilation, has_batch)
+    return shape_convnd(dim, input_shape, out_channels,
+                        kernel_size, stride, padding, dilation, has_batch)
 
 
-def infer_shape_transpose_convnd(dim,
-                                 input_shape,
-                                 out_channels,
-                                 kernel_size,
-                                 stride=1,
-                                 padding=0,
-                                 output_padding=0,
-                                 dilation=1,
-                                 has_batch=False):
+def shape_transpose_convnd(dim,
+                           input_shape,
+                           out_channels,
+                           kernel_size,
+                           stride=1,
+                           padding=0,
+                           output_padding=0,
+                           dilation=1,
+                           has_batch=False):
     """
     http://pytorch.org/docs/nn.html#convtranspose1d
     http://pytorch.org/docs/nn.html#convtranspose2d
@@ -244,14 +244,14 @@ def infer_shape_transpose_convnd(dim,
     return ((batch,) if has_batch else ()) + (out_channels, *new_img_shape)
 
 
-infer_shape_conv1d = partial(infer_shape_convnd, 1)
-infer_shape_conv2d = partial(infer_shape_convnd, 2)
-infer_shape_conv3d = partial(infer_shape_convnd, 3)
+shape_conv1d = partial(shape_convnd, 1)
+shape_conv2d = partial(shape_convnd, 2)
+shape_conv3d = partial(shape_convnd, 3)
 
 
-infer_shape_maxpool1d = partial(infer_shape_poolnd, 1)
-infer_shape_maxpool2d = partial(infer_shape_poolnd, 2)
-infer_shape_maxpool3d = partial(infer_shape_poolnd, 3)
+shape_maxpool1d = partial(shape_poolnd, 1)
+shape_maxpool2d = partial(shape_poolnd, 2)
+shape_maxpool3d = partial(shape_poolnd, 3)
 
 
 """
@@ -259,7 +259,7 @@ http://pytorch.org/docs/nn.html#avgpool1d
 http://pytorch.org/docs/nn.html#avgpool2d
 http://pytorch.org/docs/nn.html#avgpool3d
 """
-infer_shape_avgpool1d = partial(infer_shape_maxpool1d, dilation=1)
-infer_shape_avgpool2d = partial(infer_shape_maxpool2d, dilation=1)
-infer_shape_avgpool3d = partial(infer_shape_maxpool3d, dilation=1)
+shape_avgpool1d = partial(shape_maxpool1d, dilation=1)
+shape_avgpool2d = partial(shape_maxpool2d, dilation=1)
+shape_avgpool3d = partial(shape_maxpool3d, dilation=1)
 
