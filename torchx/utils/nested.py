@@ -112,9 +112,9 @@ def recursive_reduce(struct,
 
     Args:
       struct: recursive data structure
-      reduce_op: must be an associative operator that takes a list of values
+      reduce_op: must be an associative operator that takes a *generator* of values
         and returns a single value. Should be able to handle the case where the
-        list only has one value.
+        generator only has one value.
       func: maps a base object to value that will be reduced.
         if None, default to identity function `lambda x: x`
       is_base: function that takes an object and returns True if it's a base object
@@ -137,7 +137,7 @@ def recursive_reduce(struct,
             values = struct.values()
         else:
             values = struct
-        return reduce_op([
+        return reduce_op(
             recursive_reduce(
                 struct=value,
                 reduce_op=reduce_op,
@@ -147,7 +147,7 @@ def recursive_reduce(struct,
                 allow_any_dict_type=allow_any_dict_type,
             )
             for value in values
-        ])
+        )
     elif is_base is None:  # pass all non-Sequence and non-dict objects
         return func(struct)
     else:  # if is_base is not None and struct is not Sequence or dict or base object
@@ -253,3 +253,115 @@ def recursive_max(struct,
         reduce_op=max,
         **kwargs
     )
+
+
+class StructureMismatch(Exception):
+    pass
+
+
+def recursive_combine(*structs,
+                      combinator,
+                      is_base=None,
+                      allow_any_seq_type=True,
+                      allow_any_dict_type=True):
+    """
+    Combines multiple nested structs with a combinator function.
+    All structures must match: seq of same lengths, dict of same keys, etc.
+
+    Args:
+      *structs: multiple nested structs
+      combinator: f(tuple of base objects) -> combined value
+      see `recursive_reduce` for other args
+    """
+    assert len(structs) >= 1, 'must have at least one struct'
+    s0 = structs[0]
+    if is_base and is_base(s0):
+        for s in structs[1:]:
+            if not is_base(s):
+                raise StructureMismatch('should all be base object', s0, s)
+        return combinator(structs)
+    elif _is_sequence(s0, allow_any_seq_type):
+        for s in structs[1:]:
+            if not _is_sequence(s, allow_any_seq_type):
+                raise StructureMismatch('should all be sequences', s0, s)
+            if len(s) != len(s0):
+                raise StructureMismatch('unequal sequence length', len(s0), len(s))
+        return_seq = [
+            recursive_combine(
+                *s_zipped,
+                combinator=combinator,
+                is_base=is_base,
+                allow_any_seq_type=allow_any_seq_type,
+                allow_any_dict_type=allow_any_dict_type,
+            )
+            for s_zipped in zip(*structs)
+        ]
+        return type(s0)(return_seq)
+    elif _is_mapping(s0, allow_any_dict_type):
+        for s in structs[1:]:
+            if not _is_mapping(s, allow_any_dict_type):
+                raise StructureMismatch('should both be mappings', s0, s)
+            if len(s) != len(s0):
+                raise StructureMismatch('unequal dict size', len(s0), len(s))
+        # not using dict comprehension because if the struct is OrderedDict,
+        # the return value should also retain order
+        return_dict = type(s0)()
+        for key0, value0 in s0.items():
+            value_zipped = [value0]
+            for s in structs[1:]:
+                if key0 not in s:
+                    raise StructureMismatch('struct key `{}` not in {}'.format(key0, s))
+                value_zipped.append(s[key0])
+            return_dict[key0] = recursive_combine(
+                *value_zipped,
+                combinator=combinator,
+                is_base=is_base,
+                allow_any_seq_type=allow_any_seq_type,
+                allow_any_dict_type=allow_any_dict_type,
+            )
+        return return_dict
+    elif is_base is None:  # pass all non-Sequence and non-dict objects
+        return combinator(structs)
+    else:  # if is_base is not None and struct is not Sequence or dict or base object
+        raise ValueError('Unknown data structure type: {}'.format(type(s0)))
+
+
+def recursive_zip(*structs, **kwargs):
+    """
+    Combines each base object in two structs into tuple (obj1, obj2)
+
+    Args:
+      see `recursive_combine` for other args
+    """
+    return recursive_combine(
+        *structs,
+        combinator=lambda s_tuple: s_tuple,
+        **kwargs
+    )
+
+
+def recursive_compare(struct1, struct2,
+                      comparator=None,
+                      mode='all',
+                      **kwargs):
+
+    """
+    Compares two nested structs
+
+    Args:
+      comparator: (obj1, obj2) -> True/False
+      mode: 'all' or 'any'
+      see `recursive_combine` for other args
+    """
+    reducer = {
+        'all': recursive_all,
+        'any': recursive_any
+    }
+    assert mode in reducer
+    reducer = reducer[mode]
+    cmp_results = recursive_combine(
+        struct1, struct2,
+        combinator=lambda xs: comparator(xs[0], xs[1]),
+        **kwargs
+    )
+    return reducer(cmp_results)

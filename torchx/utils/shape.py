@@ -4,6 +4,7 @@ Shape inference methods
 import math
 import numpy as np
 from functools import partial
+from .nested import recursive_map, recursive_combine, recursive_compare
 
 
 def is_simple_shape(shape):
@@ -44,21 +45,25 @@ def is_valid_shape(shape, *,
     )
 
 
+def _get_shape(x):
+    "single object"
+    if isinstance(x, np.ndarray):
+        return x.shape
+    else:
+        return tuple(x.size())
+
+
 def get_shape(struct):
     """
     Recursively walks a data structure (can be tuples, lists, or dict) and
     replaces a tensor/variable/np array with its shape (tuple of int)
     """
-    if isinstance(struct, (list, tuple)):
-        return type(struct)(map(get_shape, struct))
-    elif isinstance(struct, dict):
-        return {name: get_shape(value) for name, value in struct.items()}
-    elif isinstance(struct, np.ndarray):
-        return struct.shape
-    elif struct is None:
-        return None
-    else:
-        return tuple(struct.size())
+    return recursive_map(
+        struct,
+        func=_get_shape,
+        is_base=None,
+        leave_none=True
+    )
 
 
 def print_shape(struct, **kwargs):
@@ -73,17 +78,12 @@ def get_dim_from_shape(struct):
     Recursively walks a data structure (can be tuples, lists, or dict) and
     replaces a shape (int tuple) with its dim, i.e. len(shape)
     """
-    if isinstance(struct, (list, tuple)):
-        return type(struct)(map(get_dim_from_shape, struct))
-    elif isinstance(struct, dict):
-        return {name: get_dim_from_shape(value)
-                for name, value in struct.items()}
-    elif isinstance(struct, np.ndarray):
-        return struct.shape
-    elif struct is None:
-        return None
-    else:
-        return tuple(struct.size())
+    return recursive_map(
+        struct,
+        func=lambda shape: len(shape),
+        is_base=is_simple_shape,
+        leave_none=True,
+    )
 
 
 def get_dim(struct):
@@ -91,40 +91,23 @@ def get_dim(struct):
     Recursively walks a data structure (can be tuples, lists, or dict) and
     replaces a tensor/variable/np array with its dim (int)
     """
-    if isinstance(struct, (list, tuple)):
-        return type(struct)(map(get_shape, struct))
-    elif isinstance(struct, dict):
-        return {name: get_shape(value) for name, value in struct.items()}
-    elif isinstance(struct, np.ndarray):
-        return struct.shape
-    elif struct is None:
-        return None
-    else:
-        return tuple(struct.size())
+    return recursive_map(
+        struct,
+        func=lambda tensor: len(_get_shape(tensor)),
+        is_base=None,
+        leave_none=True
+    )
 
 
 def shape_equals(struct1, struct2):
     """
     Recursively compare nested shape, tuple and list are treated as the same type
     """
-    if is_simple_shape(struct1):
-        if is_simple_shape(struct2):
-            return tuple(struct1) == tuple(struct2)
-        else:
-            return False
-    elif isinstance(struct1, (list, tuple)):
-        if isinstance(struct2, (list, tuple)):
-            return all(shape_equals(s1, s2) for s1, s2 in zip(struct1, struct2))
-        else:
-            return False
-    elif isinstance(struct1, dict):
-        if isinstance(struct2, dict):
-            return all(shape_equals(s1, s2)
-                       for s1, s2 in zip(struct1.values(), struct2.values()))
-        else:
-            return False
-    else:
-        raise ValueError('invalid shape struct type', type(struct1))
+    return recursive_compare(
+        struct1, struct2,
+        comparator=lambda x, y: tuple(x) == tuple(y),
+        is_base=is_simple_shape
+    )
 
 
 def _expands(dim, *xs):
