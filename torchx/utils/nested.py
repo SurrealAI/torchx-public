@@ -37,11 +37,19 @@ def _is_mapping(struct, allow_any_dict_type):
             or not allow_any_dict_type and isinstance(struct, dict))
 
 
+def _unknown_type_handler(struct, handler):
+    if handler is None:
+        raise ValueError('Unknown structure type: {}'.format(type(struct)))
+    else:
+        return handler(struct)
+
+
 def recursive_map(struct,
                   func,
                   is_base=None,
                   allow_any_seq_type=True,
                   allow_any_dict_type=True,
+                  unknown_type_handler=None,
                   leave_none=False):
     """
     Recursively walks a data structure (can be Sequence or dict) and
@@ -60,6 +68,8 @@ def recursive_map(struct,
       allow_any_dict_type: True (default) to allow all data structure that
         implements the collections.MutableMapping interface.
         False to allow only dict
+      unknown_type_handler: function that handles an unknown struct 
+        default None: raise Exception
       leave_none: if True, returns None if an object is None.
         False (default) to handle None's yourself.
     """
@@ -73,6 +83,7 @@ def recursive_map(struct,
                 is_base=is_base,
                 allow_any_seq_type=allow_any_seq_type,
                 allow_any_dict_type=allow_any_dict_type,
+                unknown_type_handler=unknown_type_handler,
                 leave_none=leave_none
             )
             for value in struct
@@ -89,6 +100,7 @@ def recursive_map(struct,
                 is_base=is_base,
                 allow_any_seq_type=allow_any_seq_type,
                 allow_any_dict_type=allow_any_dict_type,
+                unknown_type_handler=unknown_type_handler,
                 leave_none=leave_none
             )
         return return_dict
@@ -96,8 +108,9 @@ def recursive_map(struct,
         return None
     elif is_base is None:  # pass all non-Sequence and non-dict objects
         return func(struct)
-    else:  # if is_base is not None and struct is not Sequence or dict or base object
-        raise ValueError('Unknown data structure type: {}'.format(type(struct)))
+    else:  
+        # if is_base is not None and struct is not Sequence or dict or base object
+        return _unknown_type_handler(struct, unknown_type_handler)
 
 
 def recursive_reduce(struct,
@@ -105,7 +118,8 @@ def recursive_reduce(struct,
                      func=None,
                      is_base=None,
                      allow_any_seq_type=True,
-                     allow_any_dict_type=True):
+                     allow_any_dict_type=True,
+                     unknown_type_handler=None):
     """
     Recursively walks a data structure (can be Sequence or dict), maps each
     base object to func(obj), and reduce the results over sequence or dict.values()
@@ -145,13 +159,15 @@ def recursive_reduce(struct,
                 is_base=is_base,
                 allow_any_seq_type=allow_any_seq_type,
                 allow_any_dict_type=allow_any_dict_type,
+                unknown_type_handler=unknown_type_handler,
             )
             for value in values
         )
     elif is_base is None:  # pass all non-Sequence and non-dict objects
         return func(struct)
-    else:  # if is_base is not None and struct is not Sequence or dict or base object
-        raise ValueError('Unknown data structure type: {}'.format(type(struct)))
+    else:
+        # if is_base is not None and struct is not Sequence or dict or base object
+        return _unknown_type_handler(struct, unknown_type_handler)
 
 
 def flatten(struct, **kwargs):
@@ -263,7 +279,8 @@ def recursive_combine(*structs,
                       combinator,
                       is_base=None,
                       allow_any_seq_type=True,
-                      allow_any_dict_type=True):
+                      allow_any_dict_type=True,
+                      unknown_type_handler=None):
     """
     Combines multiple nested structs with a combinator function.
     All structures must match: seq of same lengths, dict of same keys, etc.
@@ -293,6 +310,7 @@ def recursive_combine(*structs,
                 is_base=is_base,
                 allow_any_seq_type=allow_any_seq_type,
                 allow_any_dict_type=allow_any_dict_type,
+                unknown_type_handler=unknown_type_handler,
             )
             for s_zipped in zip(*structs)
         ]
@@ -318,12 +336,14 @@ def recursive_combine(*structs,
                 is_base=is_base,
                 allow_any_seq_type=allow_any_seq_type,
                 allow_any_dict_type=allow_any_dict_type,
+                unknown_type_handler=unknown_type_handler,
             )
         return return_dict
     elif is_base is None:  # pass all non-Sequence and non-dict objects
         return combinator(structs)
-    else:  # if is_base is not None and struct is not Sequence or dict or base object
-        raise ValueError('Unknown data structure type: {}'.format(type(s0)))
+    else:
+        # if is_base is not None and s0 is not Sequence or dict or base object
+        return _unknown_type_handler(s0, unknown_type_handler)
 
 
 def recursive_zip(*structs, **kwargs):

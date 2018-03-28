@@ -76,16 +76,37 @@ def test_recursive_map():
         allow_any_dict_type=True,
         leave_none=True
     )
-    pprint(ans)
-
-    correct = {
+    assert ans == {
         'a': [{'a1': 9}, MyMap({'a2': MyList([16, 25, 36]), 'a3': None})],
         'b': MyMap({'b1': (49, 64)}), 'c': 81, 'd': (None, 100),
         'e': OrderedDict(
             [('e6', [121, 144]), ('e3', MyList([169, 196])), ('e5', 225),
              ('e1', 1), ('e7', 4), ('e2', None)])
     }
-    assert ans == correct
+
+    def _print_unknown(x):
+        print('User handles unknown', x)
+        return x
+
+    ans = U.recursive_map(
+        struct,
+        lambda x: x ** 2,
+        is_base=lambda x: isinstance(x, int),
+        allow_any_seq_type=False,
+        allow_any_dict_type=False,
+        leave_none=False,
+        unknown_type_handler=_print_unknown,
+    )
+    assert ans == {'a': [{'a1': 9}, MyMap({'a2': MyList([4, 5, 6]), 'a3': None})],
+                   'b': MyMap({'b1': (7, 8)}),  # ignored
+                   'c': 81,
+                   'd': (None, 100),
+                   'e': OrderedDict([('e6', [121, 144]),
+                                     ('e3', MyList([13, 14])),
+                                     ('e5', 225),
+                                     ('e1', 1),
+                                     ('e7', 4),
+                                     ('e2', None)])}
 
     ans = U.recursive_sum(
         struct,
