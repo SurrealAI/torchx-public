@@ -108,13 +108,21 @@ def get_dim(struct):
     )
 
 
-def shape_equals(struct1, struct2):
+def shape_equals(struct1, struct2, ignore_batch_dim=False):
     """
-    Recursively compare nested shape, tuple and list are treated as the same type
+    Recursively compare nested shape, tuple and list are treated as the same type.
+
+    Args:
+        ignore_batch_dim: default False
+          if ignored, only compare shapes starting from the second dim
     """
+    if ignore_batch_dim:
+        comparator = lambda shape1, shape2: tuple(shape1)[1:] == tuple(shape2)[1:]
+    else:
+        comparator = lambda shape1, shape2: tuple(shape1) == tuple(shape2)
     return recursive_compare(
         struct1, struct2,
-        comparator=lambda x, y: tuple(x) == tuple(y),
+        comparator=comparator,
         is_base=is_simple_shape
     )
 

@@ -42,7 +42,7 @@ def test_merge_layers():
         check_inferred_shape('Concat', locals())
 
 
-def test_functional():
+def test_simple_functional():
     x_shape = (12, 31)
     y_shape = (12, 41)
 
@@ -54,15 +54,15 @@ def test_functional():
     w = concat(Dense(7)(y), Dense(17)(w))
     out = multiply(subtract(w, Dense(7+17)(w)), Dense(7+17)(concat(x, y)))
 
-    myfunc = Functional(inputs=[x, y], outputs=[out])
+    myfunc = Functional(inputs=[x, y], outputs=[out, out])
 
     xv = new_variable(x_shape)
     yv = new_variable(y_shape)
 
-    print(myfunc._postorder_traverse())
+    print(myfunc.postorder_traverse())
     myfunc.compile()
     outv = myfunc([xv, yv])
-    print(outv.size())
+    print(U.get_shape(outv))
 
     # myfunc = MyFunc()
     # out = myfunc(xp, yp)
@@ -70,5 +70,35 @@ def test_functional():
     # outv = myfunc(xv, yv)
     # print(out.size(), myfunc.get_output_shape([x_shape, y_shape]))
 
+def test_multinode_functional():
+    x_shape = (12, 31)
+    y_shape = (12, 41)
+
+    x0 = Placeholder(x_shape)
+    y0 = Placeholder(y_shape)
+
+    x = Dense(22)(x0)
+    y = Dense(22)(y0)
+    shared1 = Dense(44)
+    out = concat(shared1(x), shared1(y))
+
+    myfunc = Functional(inputs={'xvar': x, 'yvar': y}, outputs=out)
+    myfunc0 = Functional(inputs={'xvar': x0, 'yvar': y0}, outputs={'myout': out})
+
+    x0v = new_variable(x_shape)
+    y0v = new_variable(y_shape)
+
+    xv = new_variable((30, 22))
+    yv = new_variable((30, 22))
+
+    print(myfunc0.postorder_traverse())
+    myfunc0.compile()
+    outv = myfunc0(xvar=x0v, yvar=y0v)
+    print(U.get_shape(outv))
+
+    print(myfunc.postorder_traverse())
+    myfunc.compile()
+    outv = myfunc(xvar=xv, yvar=yv)
+    print(U.get_shape(outv))
 
 run_all_tests(globals())

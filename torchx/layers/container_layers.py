@@ -122,53 +122,65 @@ class Functional(Layer):
         self.module_list = nn.ModuleList()
         self.inputs = PlaceholderStruct(inputs)
         self.outputs = PlaceholderStruct(outputs)
+        self._input_ids = set(id(p) for p in self.inputs.flatten())
 
-    def _postorder_traverse(self):
+    def postorder_traverse(self):
+        """
+        Returns:
+          list of [(layer, node_index)], postorder traversal, the next layer is
+          guaranteed to have all the input placeholders computed by the
+          previous layers.
+        """
         ordered_layers = []
-        visited_layer_ids = set()
+        visited_layer_ids = set()  # (id(layer), node_index)
         self._postorder_traverse_helper(
             self.outputs, ordered_layers, visited_layer_ids
         )
         return ordered_layers
+
+    def _not_input(self, placeholder):
+        """
+        Check if a placeholder is not one of the inputs
+        Stop graph traversal if we are at the input placeholder
+        """
+        return id(placeholder) not in self._input_ids
 
     def _postorder_traverse_helper(self, outputs,
                                    ordered_layers,
                                    visited_layer_ids):
         flattened_outputs = outputs.flatten()
         for output in flattened_outputs:
-            inbound = output.inbound_layer
-            if inbound:
+            inbound = output.inbound_layer  # None if no ancestor
+            # stop traversal when encountering input placeholder
+            if inbound and self._not_input(output):
                 self._postorder_traverse_helper(
-                    inbound.input_placeholders,
+                    inbound.input_placeholder_nodes[output.node_index],
                     ordered_layers,
                     visited_layer_ids
                 )
         for output in flattened_outputs:
             inbound = output.inbound_layer
-            if inbound and id(inbound) not in visited_layer_ids:
-                visited_layer_ids.add(id(inbound))
-                ordered_layers.append(inbound)
+            hashkey = (id(inbound), output.node_index)
+            if (inbound and
+                    self._not_input(output) and
+                    hashkey not in visited_layer_ids):
+                visited_layer_ids.add(hashkey)
+                ordered_layers.append((inbound, output.node_index))
 
     def forward(self, *args, **kwargs):
-        assert bool(args) != bool(kwargs), \
-            'either positional or keyword, but not both'
-        if kwargs:
-            input_tensors = kwargs
-        elif len(args) == 1:
-            input_tensors = args[0]  # auto-expand the lone *arg
-        else:
-            input_tensors = args
+        input_tensors = self._pack_call_args(args, kwargs)
         self.inputs.bind_tensors(input_tensors)
         output_tensors = None
-        for layer in self._postorder_traverse():
-            print('DEBUG forward layer', layer)
-            input_struct = layer.input_placeholders
+        for layer, node_index in self.postorder_traverse():
+            print('DEBUG forward layer', layer, 'node', node_index)
+            input_struct = layer.input_placeholder_nodes[node_index]
             assert input_struct.all_tensor_bound(), \
-                ('internal error: unbound placeholder in', layer)
+                ('placeholder without bound tensor in', layer)
             output_tensors = layer(input_struct.to_tensors())
-            print('DEBUG outpout', layer.output_placeholders, output_tensors.size())
-            layer.output_placeholders.bind_tensors(output_tensors)
-        return output_tensors
+            output_node = layer.output_placeholder_nodes[node_index]
+            print('DEBUG outpout', output_node, output_tensors.size())
+            output_node.bind_tensors(output_tensors)
+        return self.outputs.to_tensors()
 
     def compile(self):
         """
@@ -177,9 +189,10 @@ class Functional(Layer):
         return self
 
     def _build(self, input_shape):
-        for layer in self._postorder_traverse():
-            layer.build()
-            self.module_list.append(layer)
+        for layer, node_index in self.postorder_traverse():
+            if node_index == 0:
+                layer.build()
+                self.module_list.append(layer)
         print('DEBUG all modules', self.module_list)
 
     def get_output_shape(self, input_shape):

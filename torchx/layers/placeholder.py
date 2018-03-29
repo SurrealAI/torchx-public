@@ -7,19 +7,16 @@ class Placeholder:
     Placeholder class. Traces the call stack to reconstruct the graph
     Similar to Keras' functional API:
     https://keras.io/getting-started/functional-api-guide/
-
-    Attributes:
-      shape
-
+    https://keras.io/getting-started/functional-api-guide/#the-concept-of-layer-node
     """
     def __init__(self, shape,
                  inbound_layer=None,
-                 trigger_build=False):
+                 node_index=0):
         assert U.is_simple_shape(shape)
         self.shape = shape
         self.inbound_layer = inbound_layer
-        # flag that will build the layer that operates on this placeholders
-        self.trigger_build = trigger_build
+        # https://keras.io/getting-started/functional-api-guide/#the-concept-of-layer-node
+        self.node_index = node_index
         self.tensor = None  # actual tensor value
 
     def __repr__(self):
@@ -66,7 +63,10 @@ class PlaceholderStruct:
         )
 
     def flatten(self):
-        return U.recursive_flatten(self.struct)
+        return U.recursive_flatten(
+            self.struct,
+            is_base=_is_placeholder
+        )
 
     def setattrs(self, **attrs):
         """

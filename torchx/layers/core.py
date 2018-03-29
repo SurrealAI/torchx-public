@@ -58,9 +58,9 @@ class Layer(Module, metaclass=_LayerMeta):
         self.input_shape = input_shape
         self.init_kwargs = kwargs
         self.is_built = False
-        # can be a single Placeholder, list or dict, depending on call syntax
-        self.input_placeholders = None
-        self.output_placeholders = None
+        # https://keras.io/getting-started/functional-api-guide/#the-concept-of-layer-node
+        self.input_placeholder_nodes = []
+        self.output_placeholder_nodes = []
 
     def _build(self, input_shape):
         """
@@ -83,9 +83,11 @@ class Layer(Module, metaclass=_LayerMeta):
                 'internal error, self.input_shape should have been set after build'
             return
         if self.input_shape is not None:
+            # TODO extend is_valid_shape
             assert U.is_valid_shape(self.input_shape)
             if input_shape is not None:
-                assert tuple(input_shape) == tuple(self.input_shape), \
+                assert U.shape_equals(input_shape, self.input_shape,
+                                      ignore_batch_dim=True), \
                     'self.input_shape has already been set, ' \
                     'must be the same as `input_shape` arg of build(input_shape)'
         else:
@@ -93,14 +95,16 @@ class Layer(Module, metaclass=_LayerMeta):
             self.input_shape = input_shape
         self._build(self.input_shape)
         self.is_built = True
+        assert self.input_shape is not None, 'internal error'
 
-    def _handle_placeholder(self, input_placeholders, output_shape):
+    def _handle_placeholder(self, input_pstruct, output_shape, node_index):
         """
         Can be overriden by subclasses
 
         Args:
-          input_placeholders: PlaceholderStruct
+          input_pstruct: PlaceholderStruct
           output_shape: computed as self.get_output_shape(self.input_shape)
+          node_index: https://keras.io/getting-started/functional-api-guide/#the-concept-of-layer-node
 
         Returns:
           PlaceholderStruct
@@ -109,9 +113,31 @@ class Layer(Module, metaclass=_LayerMeta):
         return PlaceholderStruct.from_shape(
             output_shape,
             inbound_layer=self,
+            node_index=node_index
         )
 
-    def _handle_placeholder_call(self, args, kwargs):
+    def _pack_call_args(self, args, kwargs):
+        """
+        Handle variable positional and keyword args.
+        Can be overriden to change behavior for __call__ signature
+
+        Returns:
+          pack args into a single nested structure of placeholders or tensors,
+          depending on the actual call
+        """
+        assert bool(args) != bool(kwargs), \
+            'either positional or keyword, but not both'
+        assert U.is_signature_compatible(self.forward, *args, **kwargs), \
+            'self.forward() should have the same signature as placeholder call'
+
+        if kwargs:
+            return kwargs
+        elif len(args) == 1:
+            return args[0]  # auto-expand the lone *arg
+        else:
+            return args
+
+    def _handle_placeholder_call(self, *args, **kwargs):
         """
         Only the following __call__() signatures are allowed:
         1. (*args): for multi-input
@@ -125,24 +151,22 @@ class Layer(Module, metaclass=_LayerMeta):
           When args/kwargs has placeholder, return another Placeholder object
           with computed output shape
         """
-        assert U.is_signature_compatible(self.forward, *args, **kwargs), \
-            'self.forward() should have the same signature as placeholder call'
-
-        if kwargs:
-            placeholders = kwargs
-        elif len(args) == 1:
-            placeholders = args[0]  # auto-expand the lone *arg
+        placeholders = self._pack_call_args(args, kwargs)
+        pstruct = PlaceholderStruct(placeholders)
+        self.input_placeholder_nodes.append(pstruct)
+        if self.input_shape is None:
+            self.input_shape = pstruct.get_shape()  # for build()
         else:
-            placeholders = args
-        self.input_placeholders = PlaceholderStruct(placeholders)
-        self.input_shape = self.input_placeholders.get_shape()  # for build()
+            assert U.shape_equals(self.input_shape, pstruct.get_shape()), \
+                'multiple placeholder calls should have the same input_shape'
         output_shape = self.get_output_shape(self.input_shape)
         output = self._handle_placeholder(
-            self.input_placeholders,
-            output_shape
+            pstruct,
+            output_shape=output_shape,
+            node_index=len(self.input_placeholder_nodes) - 1
         )
         assert isinstance(output, PlaceholderStruct)
-        self.output_placeholders = output
+        self.output_placeholder_nodes.append(output)
         return output.get()  # plain nested structure of placeholders
 
     def __call__(self, *args, **kwargs):
@@ -154,16 +178,20 @@ class Layer(Module, metaclass=_LayerMeta):
           - computed tensor
           - or Placeholder object if args/kwargs has placeholder
         """
-        assert bool(args) != bool(kwargs), \
-            'either positional or keyword, but not both'
         if PlaceholderStruct.exists(args) or PlaceholderStruct.exists(kwargs):
-            return self._handle_placeholder_call(args, kwargs)
+            return self._handle_placeholder_call(*args, **kwargs)
         if self.input_shape is not None:
             self.build()
-        elif not self.is_built:
+        else:
             # TODO enable auto-shape inference and auto build
             raise RuntimeError(self.__class__.__name__ +
                ' input_shape not specified and Layer.build() has not been called yet.')
+        tensors = self._pack_call_args(args, kwargs)  # nested tensors
+        tensors_shape = U.get_shape(tensors)
+        assert U.shape_equals(
+            tensors_shape, self.input_shape, ignore_batch_dim=True
+        ), ('actual tensor shape does not match input_shape at build time',
+            tensors_shape, self.input_shape)
         return super().__call__(*args, **kwargs)
 
 
