@@ -3,6 +3,7 @@ Shape inference methods
 """
 import math
 import numpy as np
+import torch
 from functools import partial
 from .nested import recursive_map, recursive_combine, recursive_compare
 from .numpy_utils import product
@@ -136,6 +137,51 @@ def _expands(dim, *xs):
             assert len(x) == dim
             return x
     return map(lambda x: _expand(x), xs)
+
+
+_HELPER_TENSOR = torch.zeros((1,))
+
+
+def shape_slice(input_shape, slice):
+    """
+    Credit to Adam Paszke for the trick. Shape inferece without instantiating
+    an actual tensor.
+    The key is that `.expand()` does not actually allocate memory
+    Still needs to allocate a one-element HELPER_TENSOR.
+    """
+    return tuple(_HELPER_TENSOR.expand(*input_shape)[slice].size())
+
+
+class ShapeSlice:
+    """
+    shape_slice inference with easy []-operator
+    """
+    def __init__(self, input_shape):
+        self.input_shape = input_shape
+
+    def __getitem__(self, slice):
+        return shape_slice(self.input_shape, slice)
+
+
+def shape_view(input_shape, *view_args):
+    """
+    Can only have at most one "-1" dimension to be inferred.
+    The expand() trick doesn't work because the input must be contiguous.
+    """
+    # TODO handle input shape with None
+    view_args = list(view_args)
+    assert view_args.count(-1) <= 1, 'can have at most one -1 for inferring shape'
+    old_elems = product(input_shape)
+    new_elems = product(view_args)
+    if new_elems < 0:  # -1 exists
+        new_elems *= -1
+        assert old_elems % new_elems == 0, \
+            'new shape must be compatible with old shape'
+        view_args[view_args.index(-1)] = old_elems // new_elems  # infer -1
+    else:
+        assert old_elems == new_elems, \
+            'new shape must have the same total number of elements as old shape'
+    return tuple(view_args)
 
 
 def shape_convnd(dim,

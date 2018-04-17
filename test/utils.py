@@ -12,6 +12,7 @@ import torchx as tx
 import torchx.utils as U
 from torchx.layers import *
 import torchx.nn as nnx
+import pytest
 
 pp = pprint.pprint
 
