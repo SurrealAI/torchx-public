@@ -86,6 +86,12 @@ class Multiply(ElementwiseMerge):
         return output
 
 
+class Divide(ElementwiseMerge):
+    def forward(self, x_list):
+        assert len(x_list) == 2
+        return x_list[0] / x_list[1]
+
+
 class Maximum(ElementwiseMerge):
     def forward(self, x_list):
         output = x_list[0]
@@ -117,6 +123,10 @@ def subtract(x1, x2):
 @U.enable_varargs
 def multiply(x_list):
     return Multiply()(x_list)
+
+
+def divide(x1, x2):
+    return Divide()(x1, x2)
 
 
 @U.enable_varargs

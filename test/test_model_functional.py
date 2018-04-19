@@ -42,6 +42,28 @@ def test_merge_layers():
         check_inferred_shape('Concat', locals())
 
 
+def test_placeholder_overload():
+    shape = (1,)
+    x = Placeholder(shape)
+    y = Placeholder(shape)
+    a = x + y
+    b = x - y
+    c = x * y
+    d = x / y
+    out = a % b % c % d
+    myfunc = Functional(inputs=[x,y], outputs=[out])
+
+    xv = new_variable(shape, 3)
+    yv = new_variable(shape, 5)
+
+    print(myfunc.postorder_traverse())
+    myfunc.compile()
+    outv = myfunc([xv, yv])
+    print(outv)
+    sum_tensor = new_variable(shape, 21.6)
+    assert torch.equal(torch.sum(outv[0]), sum_tensor)
+
+
 def test_simple_functional():
     x_shape = (12, 31)
     y_shape = (12, 41)
