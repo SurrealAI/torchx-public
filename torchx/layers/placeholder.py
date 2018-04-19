@@ -38,10 +38,6 @@ class Placeholder:
         from .merge_layers import divide
         return divide(self, p2)
 
-    def __mod__(self, p2):
-        from .merge_layers import concat
-        return concat([self, p2])
-
 
 def _is_placeholder(x):
     return isinstance(x, Placeholder)

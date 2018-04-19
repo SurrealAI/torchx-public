@@ -46,22 +46,18 @@ def test_placeholder_overload():
     shape = (1,)
     x = Placeholder(shape)
     y = Placeholder(shape)
-    a = x + y
-    b = x - y
-    c = x * y
-    d = x / y
-    out = a % b % c % d
+    out = x + y - x * y
     myfunc = Functional(inputs=[x,y], outputs=[out])
 
     xv = new_variable(shape, 3)
     yv = new_variable(shape, 5)
 
+    # should be add, multiply, subtract
     print(myfunc.postorder_traverse())
     myfunc.compile()
     outv = myfunc([xv, yv])
     print(outv)
-    sum_tensor = new_variable(shape, 21.6)
-    assert torch.equal(torch.sum(outv[0]), sum_tensor)
+    assert torch.equal(outv[0], new_variable(shape, -7))
 
 
 def test_simple_functional():
