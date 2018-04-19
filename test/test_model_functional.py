@@ -43,15 +43,15 @@ def test_merge_layers():
 
 
 def test_placeholder_overload():
-    xshape = (1,)
-    yshape = (2,)
+    xshape = (5, 6)
+    yshape = (7, 8)
     x = Placeholder(xshape)
     y = Placeholder(yshape)
     # tries indexing using integer and slice
-    y = y[0]
-    out = x + y - x * y
-    # out = x + y[0] - x * y[0:-1:1]
-    myfunc = Functional(inputs=[x,y], outputs=[out])
+    out = x + y[2:, 2:] - x * y[:-2, :-2]
+    # out = x + y - x * y
+    myfunc = Functional(inputs=[x, y], outputs=[out])
+    # out = x + y - x * y
 
     xv = new_variable(xshape, 3)
     yv = new_variable(yshape, 5)
@@ -122,5 +122,6 @@ def test_multinode_functional():
     myfunc.compile()
     outv = myfunc(xvar=xv, yvar=yv)
     print(U.get_shape(outv))
+
 
 run_all_tests(globals())

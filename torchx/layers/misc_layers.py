@@ -73,8 +73,8 @@ class Slice(Layer):
 
 
 # ==================== functional forms ====================
-def slice(x, slice, input_shape):
-    return Slice(slice, input_shape=input_shape)(x)
+def slice(x, slice):
+    return Slice(slice)(x)
 
 
 # def fc_layers(input_size, output_size, hiddens, initializer='xavier'):
