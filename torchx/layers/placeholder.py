@@ -22,6 +22,26 @@ class Placeholder:
     def __repr__(self):
         return 'P{}'.format(self.shape)
 
+    def __getitem__(self, key):
+        from .misc_layers import slice
+        return slice(self, key)
+
+    def __add__(self, p2):
+        from .merge_layers import add
+        return add(self, p2)
+
+    def __sub__(self, p2):
+        from .merge_layers import subtract
+        return subtract(self, p2)
+
+    def __mul__(self, p2):
+        from .merge_layers import multiply
+        return multiply(self, p2)
+
+    def __truediv__(self, p2):
+        from .merge_layers import divide
+        return divide(self, p2)
+
 
 def _is_placeholder(x):
     return isinstance(x, Placeholder)

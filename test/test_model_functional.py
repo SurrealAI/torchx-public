@@ -42,6 +42,28 @@ def test_merge_layers():
         check_inferred_shape('Concat', locals())
 
 
+def test_placeholder_overload():
+    xshape = (5, 6)
+    yshape = (7, 8)
+    x = Placeholder(xshape)
+    y = Placeholder(yshape)
+    # tries indexing using integer and slice
+    out = x + y[2:, 2:] - x * y[:-2, :-2]
+    # out = x + y - x * y
+    myfunc = Functional(inputs=[x, y], outputs=[out])
+    # out = x + y - x * y
+
+    xv = new_variable(xshape, 3)
+    yv = new_variable(yshape, 5)
+
+    # should be add, multiply, subtract
+    print(myfunc.postorder_traverse())
+    myfunc.compile()
+    outv = myfunc([xv, yv])
+    print(outv)
+    assert torch.equal(outv[0], new_variable(xshape, -7))
+
+
 def test_simple_functional():
     x_shape = (12, 31)
     y_shape = (12, 41)
@@ -100,5 +122,6 @@ def test_multinode_functional():
     myfunc.compile()
     outv = myfunc(xvar=xv, yvar=yv)
     print(U.get_shape(outv))
+
 
 run_all_tests(globals())

@@ -144,7 +144,7 @@ _HELPER_TENSOR = torch.zeros((1,))
 
 def shape_slice(input_shape, slice):
     """
-    Credit to Adam Paszke for the trick. Shape inferece without instantiating
+    Credit to Adam Paszke for the trick. Shape inference without instantiating
     an actual tensor.
     The key is that `.expand()` does not actually allocate memory
     Still needs to allocate a one-element HELPER_TENSOR.
