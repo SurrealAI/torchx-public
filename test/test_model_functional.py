@@ -43,21 +43,25 @@ def test_merge_layers():
 
 
 def test_placeholder_overload():
-    shape = (1,)
-    x = Placeholder(shape)
-    y = Placeholder(shape)
+    xshape = (1,)
+    yshape = (2,)
+    x = Placeholder(xshape)
+    y = Placeholder(yshape)
+    # tries indexing using integer and slice
+    y = y[0]
     out = x + y - x * y
+    # out = x + y[0] - x * y[0:-1:1]
     myfunc = Functional(inputs=[x,y], outputs=[out])
 
-    xv = new_variable(shape, 3)
-    yv = new_variable(shape, 5)
+    xv = new_variable(xshape, 3)
+    yv = new_variable(yshape, 5)
 
     # should be add, multiply, subtract
     print(myfunc.postorder_traverse())
     myfunc.compile()
     outv = myfunc([xv, yv])
     print(outv)
-    assert torch.equal(outv[0], new_variable(shape, -7))
+    assert torch.equal(outv[0], new_variable(xshape, -7))
 
 
 def test_simple_functional():

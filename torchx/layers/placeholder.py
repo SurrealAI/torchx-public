@@ -22,6 +22,10 @@ class Placeholder:
     def __repr__(self):
         return 'P{}'.format(self.shape)
 
+    def __getitem__(self, key):
+        from .misc_layers import slice
+        return slice(self.tensor, key, input_shape=self.shape)
+
     def __add__(self, p2):
         from .merge_layers import add
         return add(self, p2)
