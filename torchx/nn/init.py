@@ -41,18 +41,21 @@ def is_conv_module(module, dim=None):
 
 def th_all_initializer_dict():
     """
+    In v0.4, all initializers end with underscore to denote in-place
+    the returned initializer name does NOT have the trailing underscore
+
     Returns:
       dict of {'InitializerName': initializer_method} in torch.nn.init
     """
     initers = {
-        init_name: init_method for init_name, init_method
+        init_name[:-1]: init_method for init_name, init_method
         in vars(nn.init).items()
         if not init_name.startswith('_')
+            and init_name.endswith('_')
             and callable(init_method)
-            and init_name not in ['Variable', 'calculate_gain']
     }
     non_builtin = {
-        'zero': lambda tensor: nn.init.constant(tensor, 0)
+        'zero': lambda tensor: nn.init.constant_(tensor, 0)
     }
     initers.update(non_builtin)
     return initers
