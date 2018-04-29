@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 from .compute import th_clip_norm
-from torchx.gpu import get_scope_gpu
+from torchx.device import device_scope
 from torchx.utils.common import SaveInitArgs
 
 
@@ -141,7 +141,7 @@ class Module(nn.Module, SaveInitArgs):
         """
         if self._infinite_recursion_guard:
             return super().__call__(*args, **kwargs)
-        scope_gpu_ids = get_scope_gpu()  # from torch_gpu_scope() context
+        scope_gpu_ids = get_scope_device()  # from torch_gpu_scope() context
         assert isinstance(scope_gpu_ids, list), 'internal error, must be list'
         self._gpu_ids = scope_gpu_ids
         if len(scope_gpu_ids) == 1:  # simply send to that device

@@ -4,7 +4,6 @@ Numpy utils
 import numpy as np
 import torch
 from torch.autograd import Variable
-from torchx.gpu import GpuVariable
 from .numpy_utils import is_np_array, is_np_scalar, np_cast
 from .shape import numel
 
@@ -14,8 +13,6 @@ def get_torch_type(x):
         return 'list'
     elif is_np_array(x) or is_np_scalar(x):
         return 'numpy'
-    elif isinstance(x, Variable):
-        return 'variable'
     elif torch.is_tensor(x):
         return 'tensor'
     else:
@@ -45,9 +42,7 @@ def to_float_tensor(x, copy=True):
 
 def to_scalar(x):
     typ = get_torch_type(x)
-    if typ in ['tensor', 'variable']:
-        if typ == 'variable':
-            x = x.data
+    if typ == 'tensor':
         assert numel(x) == 1, \
             'tensor must have only 1 element to convert to scalar'
         return x.view(-1)[0]
@@ -59,9 +54,3 @@ def to_scalar(x):
     else:
         return x
 
-
-def to_float_variable(x, copy=True, **kwargs):
-    if get_torch_type(x) == 'variable':
-        return x
-    else:
-        return GpuVariable(to_float_tensor(x, copy=copy), **kwargs)
