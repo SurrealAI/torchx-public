@@ -174,3 +174,24 @@ def th_hard_update(target, source):
     with torch.no_grad():
         for target_param, param in zip(target, source):
             target_param.copy_(param)
+
+
+def th_to_scalar(x):
+    """
+    To python native int/float type
+    """
+    if torch.is_tensor(x):
+        assert x.numel() == 1, \
+            'tensor must have only 1 element to convert to scalar'
+        x = x.view(-1)[0]
+        if x.dtype in [torch.float16, torch.float32, torch.float64]:
+            return float(x)
+        else:
+            return int(x)
+    elif U.is_np_array(x) or U.is_np_scalar(x):
+        return np.asscalar(x)
+    elif isinstance(x, (list, tuple)):
+        assert len(x) == 1
+        return x[0]
+    else:
+        return x
