@@ -1,11 +1,23 @@
+"""
+Data type 	            torch.dtype 	                Tensor types
+---------               -----------                     ------------
+32-bit floating point 	torch.float32 or torch.float 	torch.*.FloatTensor
+64-bit floating point 	torch.float64 or torch.double 	torch.*.DoubleTensor
+16-bit floating point 	torch.float16 or torch.half 	torch.*.HalfTensor
+8-bit integer (unsigned) 	torch.uint8 	torch.*.ByteTensor
+8-bit integer (signed) 	torch.int8 	torch.*.CharTensor
+16-bit integer (signed) 	torch.int16 or torch.short 	torch.*.ShortTensor
+32-bit integer (signed) 	torch.int32 or torch.int 	torch.*.IntTensor
+64-bit integer (signed) 	torch.int64 or torch.long 	torch.*.LongTensor
+"""
 import sys
 import contextlib
 import torch
-from collections import abc
 
 
-# list of torch.device() objects
-# if the list has more than 1 GPU, it's meant for torch.nn.DataParallel
+# list of (device_list, dtype) tuples.
+# device_list is a list of torch.device() objects
+# if the device list has more than 1 GPU, it's meant for torch.nn.DataParallel
 _PYTORCH_DEVICES_ = []
 
 
@@ -19,8 +31,20 @@ cuda_count = torch.cuda.device_count
 has_cuda = torch.cuda.is_available
 
 
-def get_devices_in_scope():
-    return _PYTORCH_DEVICES_[-1] if _PYTORCH_DEVICES_ else [CPU_DEVICE]
+def get_device_in_scope():
+    if _PYTORCH_DEVICES_:
+        devices, dtype = _PYTORCH_DEVICES_[-1]
+        return devices
+    else:
+        return [CPU_DEVICE]
+
+
+def get_dtype_in_scope():
+    if _PYTORCH_DEVICES_:
+        devices, dtype = _PYTORCH_DEVICES_[-1]
+        return dtype
+    else:
+        return torch.float32
 
 
 def ids_to_devices(device):
@@ -60,12 +84,13 @@ def ids_to_devices(device):
 
 
 @contextlib.contextmanager
-def device_scope(device, override_parent=True, fallback=True):
+def device_scope(device, dtype=torch.float32, override_parent=True):
     """
-    All constructor functions, e.g. `torchx.zeros()` inside the scope will
-    automatically send the value to the specified device. If you use the builtin
-    constructors (e.g. torch.zeros()), the device transfer will NOT happen
-    automatically. You have to specify `device=` explicitly.
+    All constructor functions, e.g. `torch.zeros()` inside the scope will
+    automatically create tensor with the specified dtype and device.
+    This is achieved by setting the default device first by
+    torch.set_default_tensor_type, and then set the default dtype by
+    torch.set_default_dtype
 
     If you create torchx.nn.Module inside this scope, it will automatically
     invoke module.to(device) when you call the module
@@ -86,8 +111,13 @@ def device_scope(device, override_parent=True, fallback=True):
             - "cuda:all" to use all available GPUs for torchx.DataParallel
             - list of any of the above for torchx.DataParallel
         override_parent: True to override the device in parent scope.
-        fallback: fallback to CPU when GPU is unavailable
+
+    References:
+        - http://pytorch.org/docs/stable/tensor_attributes.html
+        - torch.set_default_dtype, torch.set_default_tensor_type
+             http://pytorch.org/docs/stable/torch.html#torch.set_default_dtype
     """
+    assert dtype in [torch.float32, torch.float64], 'torch v0.4 restrictions'
     global _PYTORCH_DEVICES_
     count = torch.cuda.device_count()
     devices = ids_to_devices(device)
@@ -99,14 +129,31 @@ def device_scope(device, override_parent=True, fallback=True):
             print('For multiGPU training, the first GPU index should be 0. ' 
                   'You can set CUDA_VISIBLE_DEVICES env variable to work around.',
                   file=sys.stderr)
-    if fallback and count == 0 and devices[0].type != 'cpu':
+    if count == 0 and devices[0].type != 'cpu':
         print('WARNING: no GPU found, fall back to CPU.', file=sys.stderr)
         devices = [CPU_DEVICE]
 
     if not override_parent and _PYTORCH_DEVICES_:
-        devices = _PYTORCH_DEVICES_[-1]
+        devices, dtype = _PYTORCH_DEVICES_[-1]
 
-    _PYTORCH_DEVICES_.append(devices)
-    yield
+    _PYTORCH_DEVICES_.append((devices, dtype))
+    old_dtype = torch.get_default_dtype()
+    if devices[0] == CPU_DEVICE:
+        torch.set_default_dtype(dtype)
+        yield
+    else:
+        # set CUDA for all creation_ops (torch.zeros)
+        torch.set_default_tensor_type(torch.cuda.FloatTensor)
+        torch.set_default_dtype(dtype)
+        # set default device for all creation_ops
+        with torch.cuda.device(devices[0].index):
+            yield
+
     _PYTORCH_DEVICES_.pop()
+    torch.set_default_dtype(old_dtype)  # restore dtype
+
+
+# ========================================================
+# ================== tensor creation ops =================
+# ========================================================
 
