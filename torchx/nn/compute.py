@@ -24,57 +24,6 @@ def th_normalize_feature(feats):
     return (feats - mean) / std
 
 
-def th_where(cond, x1, x2):
-    """
-    Similar to np.where and tf.where
-
-    Deprecated: torch v0.4 adds `torch.where()`
-    """
-    cond = cond.type_as(x1)
-    return cond * x1 + (1 - cond) * x2
-
-
-def th_huber_loss_per_element(x, y=None, delta=1.0):
-    """
-    Args:
-        if y is not None, compute huber_loss(x - y)
-
-    Deprecated: torch v0.4 adds `reduce=True/False` keyword to all loss functions
-    """
-    if y is not None:
-        x = x - y
-    x_abs = x.abs()
-    return th_where(x_abs < delta,
-                    0.5 * x * x,
-                    delta * (x_abs - 0.5 * delta))
-
-
-def th_norm(tensor, norm_type=2):
-    """
-    Supports infinity norm
-    """
-    norm_type = float(norm_type)
-    if norm_type == float('inf'):
-        return tensor.abs().max()
-    else:
-        return tensor.norm(norm_type)
-
-
-def th_clip_norm(tensor, clip, norm_type=2, in_place=False):
-    """
-    Deprecated: torch v0.4 adds nn.utils.clip_grad_norm_
-    http://pytorch.org/docs/stable/nn.html?highlight=clip#torch.nn.utils.clip_grad_norm_
-    """
-    norm = th_norm(tensor, norm_type)
-    clip_coef = clip / (norm + 1e-6)
-    if clip_coef < 1:
-        if in_place:
-            tensor.mul_(clip_coef)
-        else:
-            tensor = tensor * clip_coef
-    return tensor
-
-
 def th_flatten(x):
     """
     https://discuss.pytorch.org/t/runtimeerror-input-is-not-contiguous/930/4
@@ -195,3 +144,57 @@ def th_to_scalar(x):
         return x[0]
     else:
         return x
+
+
+# ==================== Deprecated in v0.4 ====================
+def th_where(cond, x1, x2):
+    """
+    Similar to np.where and tf.where
+
+    Deprecated: torch v0.4 adds `torch.where()`
+    """
+    cond = cond.type_as(x1)
+    return cond * x1 + (1 - cond) * x2
+
+
+def th_huber_loss_per_element(x, y=None, delta=1.0):
+    """
+    Args:
+        if y is not None, compute huber_loss(x - y)
+
+    Deprecated: torch v0.4 adds `reduce=True/False` keyword to all loss functions
+    """
+    if y is not None:
+        x = x - y
+    x_abs = x.abs()
+    return th_where(x_abs < delta,
+                    0.5 * x * x,
+                    delta * (x_abs - 0.5 * delta))
+
+
+def th_norm(tensor, norm_type=2):
+    """
+    Supports infinity norm
+    """
+    norm_type = float(norm_type)
+    if norm_type == float('inf'):
+        return tensor.abs().max()
+    else:
+        return tensor.norm(norm_type)
+
+
+def th_clip_norm(tensor, clip, norm_type=2, in_place=False):
+    """
+    Deprecated: torch v0.4 adds nn.utils.clip_grad_norm_
+    http://pytorch.org/docs/stable/nn.html?highlight=clip#torch.nn.utils.clip_grad_norm_
+    """
+    norm = th_norm(tensor, norm_type)
+    clip_coef = clip / (norm + 1e-6)
+    if clip_coef < 1:
+        if in_place:
+            tensor.mul_(clip_coef)
+        else:
+            tensor = tensor * clip_coef
+    return tensor
+
+
