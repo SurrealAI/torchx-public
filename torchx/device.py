@@ -47,40 +47,70 @@ def get_dtype_in_scope():
         return torch.float32
 
 
-def ids_to_devices(device):
+def id_to_device(device):
     """
     -1 -> torch.device('cpu')
-    [2, 3] -> torch.device('cuda:2'), torch.device('cuda:3')
     'cuda:1' -> torch.device('cuda:1')
-    'cuda:all' -> [torch.device('cuda:0'), torch.device('cuda:1'), ...]
+    'gpu:3' -> torch.device('cuda:3')
 
     Returns:
-        list of torch.device()
+        torch.device() object
     """
     if isinstance(device, int):
         if device < 0:
-            return [CPU_DEVICE]
+            return CPU_DEVICE
         else:
-            return [torch.device('cuda:{}'.format(device))]
+            return torch.device('cuda:{}'.format(device))
     elif not device:
-        return [CPU_DEVICE]
+        return CPU_DEVICE
     elif isinstance(device, type(torch.device(0))):
-        return [device]
+        return device
     elif isinstance(device, str):
-        device = device.lower()
-        if device == 'cuda:all':
-            count = torch.cuda.device_count()
-            if count == 0:
-                return [CPU_DEVICE]
-            else:
-                return [torch.device('cuda:{}'.format(i)) for i in range(count)]
-        else:
-            return [torch.device(device)]
-    elif isinstance(device, (list, tuple)):
-        assert 'cuda:all' not in device, 'cannot have cuda:all in a list of devices'
-        return [ids_to_devices(d)[0] for d in device]
+        device = device.lower().replace('gpu', 'cuda')
+        return torch.device(device)
     else:
         raise ValueError('unsupported: ', device)
+
+
+def ids_to_devices(devices):
+    """
+    [2, 3] -> torch.device('cuda:2'), torch.device('cuda:3')
+    'cuda:all' -> [torch.device('cuda:0'), torch.device('cuda:1'), ...]
+    """
+    if isinstance(devices, (list, tuple)):
+        assert 'cuda:all' not in devices, 'cannot have cuda:all in a list of devices'
+        return [id_to_device(d) for d in devices]
+    elif devices == 'cuda:all':
+        count = torch.cuda.device_count()
+        if count == 0:
+            return [CPU_DEVICE]
+        else:
+            return [torch.device('cuda:{}'.format(i)) for i in range(count)]
+    else:
+        return [id_to_device(devices)]
+
+
+def get_default_device_dtype():
+    """
+    Returns:
+        current (device, dtype) tuple
+    """
+    return torch.zeros((0,)).device, torch.get_default_dtype()
+
+
+def set_default_device_dtype(device, dtype):
+    """
+    Sets device and dtype for all creation ops (e.g. torch.zeros()) afterwards
+    """
+    device = id_to_device(device)
+    if device == CPU_DEVICE:
+        tensor_type = torch.FloatTensor
+    else:
+        tensor_type = torch.cuda.FloatTensor
+        torch.cuda.set_device(device.index if device.index else 0)
+    # set CPU or GPU for all creation_ops (torch.zeros) afterwards
+    torch.set_default_tensor_type(tensor_type)
+    torch.set_default_dtype(dtype)
 
 
 @contextlib.contextmanager
@@ -137,20 +167,13 @@ def device_scope(device, dtype=torch.float32, override_parent=True):
         devices, dtype = _PYTORCH_DEVICES_[-1]
 
     _PYTORCH_DEVICES_.append((devices, dtype))
-    old_dtype = torch.get_default_dtype()
-    if devices[0] == CPU_DEVICE:
-        torch.set_default_dtype(dtype)
-        yield
-    else:
-        # set CUDA for all creation_ops (torch.zeros)
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-        torch.set_default_dtype(dtype)
-        # set default device for all creation_ops
-        with torch.cuda.device(devices[0].index):
-            yield
+    old_device, old_dtype = get_default_device_dtype()
+    set_default_device_dtype(devices[0], dtype)
+
+    yield devices[0]
 
     _PYTORCH_DEVICES_.pop()
-    torch.set_default_dtype(old_dtype)  # restore dtype
+    set_default_device_dtype(old_device, old_dtype)
 
 
 # ========================================================
