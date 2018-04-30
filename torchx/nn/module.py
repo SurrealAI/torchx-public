@@ -50,6 +50,16 @@ class Module(nn.Module, SaveInitArgs):
         th_copy_module(self, other_module)
         return self
 
+    def freeze(self):
+        "same effect as with torch.no_grad()"
+        for param in self.parameters():
+            param.requires_grad = False
+
+    def unfreeze(self):
+        "same effect as with torch.enable_grad()"
+        for param in self.parameters():
+            param.requires_grad = True
+
     def soft_update(self, other_module, tau):
         th_soft_update(target=self, source=other_module, tau=tau)
 

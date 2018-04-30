@@ -6,19 +6,30 @@ from test.utils import *
 def check_inferred_shape(msg, local_dict):
     model = local_dict['model']
     x = local_dict['x']
+    assert x.grad is None
     input_shape = local_dict['input_shape']
     inferred_shape = model.get_output_shape(input_shape)
 
-    x = model(x)  # actual forward prop
-    actual_shape = U.get_shape(x)
+    z = model(x)  # actual forward prop
+    actual_shape = U.get_shape(z)
+    if isinstance(z, (list, tuple)):
+        z[0].backward(torch.randn(actual_shape[0]))
+    else:
+        z.backward(torch.randn(actual_shape))
+    assert x.grad is not None, 'backprop does not reach the input tensor'
+    x.grad = None
     print(msg, inferred_shape)
     assert U.shape_equals(inferred_shape, actual_shape), \
         ('inferred', inferred_shape, 'actual', actual_shape)
 
 
+def new_tensor(input_shape):
+    return torch.randn(input_shape, requires_grad=True)
+
+
 def test_dense_sequential():
     input_shape = (12, 37)
-    x = new_variable(input_shape)
+    x = new_tensor(input_shape)
 
     model = Sequential([
         Dense(93, input_shape=input_shape),
@@ -32,7 +43,7 @@ def test_dense_sequential():
 
 def test_conv_sequential():
     input_shape= (12, 13, 128, 256)
-    x = new_variable(input_shape)
+    x = new_tensor(input_shape)
 
     model = Sequential([
         Conv2D(21,
@@ -79,7 +90,7 @@ def test_conv_sequential():
 
 def test_rnn_without_state():
     input_shape = (10, 8, 17)  # batch_size, seq_len, feature_dim
-    x = new_variable(input_shape)
+    x = new_tensor(input_shape)
 
     model = Sequential([
         SimpleRNN(23,
@@ -111,7 +122,7 @@ def test_rnn_without_state():
 
 def test_rnn_with_state():
     input_shape = (10, 13, 17)  # batch_size, seq_len, feature_dim
-    x = new_variable(input_shape)
+    x = new_tensor(input_shape)
 
     model = Sequential([
         SimpleRNN(23,
@@ -184,7 +195,7 @@ def test_rnn_with_state():
 
 def test_time_distributed():
     input_shape = (10, 8, 3, 64, 32)  # batch_size, seq_len, image CxHxW
-    x = new_variable(input_shape)
+    x = new_tensor(input_shape)
 
     model = TimeDistributed([
         Conv2D(4,
@@ -258,4 +269,4 @@ def test_time_distributed():
     check_inferred_shape('TimeDistributed final state concat', locals())
 
 
-run_all_tests(globals())
+# run_all_tests(globals())
