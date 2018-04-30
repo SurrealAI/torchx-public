@@ -8,7 +8,7 @@ def th_median(t):
     """
     Find median of entire tensor or Variable
     """
-    return U.to_float_tensor(t).view(-1).median(dim=0)[0][0]
+    return t.view(-1).median(dim=0)[0][0]
 
 
 def th_median_abs(t):
