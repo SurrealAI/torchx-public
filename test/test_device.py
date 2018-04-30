@@ -38,6 +38,10 @@ def test_default_device_dtype():
         print('TEST ONLY RUNS ON >= 3 GPUs')
 
 
+def get_device_in_scope():
+    return get_torchx_device_dtype()[0]
+
+
 def test_device_scope():
     D = torch.device
     with device_scope(-1, torch.double):

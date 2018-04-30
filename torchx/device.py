@@ -31,20 +31,54 @@ cuda_count = torch.cuda.device_count
 has_cuda = torch.cuda.is_available
 
 
-def get_device_in_scope():
-    if _PYTORCH_DEVICES_:
-        devices, dtype = _PYTORCH_DEVICES_[-1]
-        return devices
-    else:
-        return [CPU_DEVICE]
+def cuda_memory(ids, unit='b', mode='alloc', is_max=False):
+    """
+    Get cuda memory
+    http://pytorch.org/docs/master/cuda.html#torch.cuda.memory_allocated
 
+    Args:
+        ids: either a single GPU int index or a list of int indices.
+            if "all", return a list of memory on all available GPUs
+        unit: b, kb, mb, gb
+        mode: alloc (allocated) or cache (cached)
+        is_max: return the max GPU memory managed by pytorch
+            http://pytorch.org/docs/master/cuda.html#torch.cuda.max_memory_cached
 
-def get_dtype_in_scope():
-    if _PYTORCH_DEVICES_:
-        devices, dtype = _PYTORCH_DEVICES_[-1]
-        return dtype
+    Returns:
+        if ids is a single int, return memory sizes on the device at the index
+        if ids is an int list, return a list of memory sizes
+        if ids is "all", return a list of memory sizes on all available GPUs
+    """
+    if isinstance(ids, (tuple, list)):
+        return [cuda_memory(i, unit=unit, mode=mode, is_max=is_max)
+                for i in ids]
+    elif ids == 'all':
+        return [cuda_memory(i, unit=unit, mode=mode, is_max=is_max)
+                for i in range(cuda_count())]
+
+    assert isinstance(ids, int) and ids >= 0
+    unit = unit.lower()
+    if unit == 'b':
+        divisor = 1
+    elif unit == 'kb':
+        divisor = 1024
+    elif unit == 'mb':
+        divisor = 1024 * 1024
+    elif unit == 'gb':
+        divisor = 1024 * 1024 * 1024
     else:
-        return torch.float32
+        raise ValueError('invalid unit: [b, kb, mb, gb]')
+    assert mode in ['alloc', 'allocated', 'cache', 'cached']
+    is_alloc = mode in ['alloc', 'allocated']
+    if is_alloc and is_max:
+        query = torch.cuda.max_memory_allocated
+    elif is_alloc and not is_max:
+        query = torch.cuda.memory_allocated
+    elif not is_alloc and is_max:
+        query = torch.cuda.max_memory_cached
+    else:
+        query = torch.cuda.memory_cached
+    return query(ids) // divisor
 
 
 def id_to_device(device):
@@ -70,6 +104,19 @@ def id_to_device(device):
         return torch.device(device)
     else:
         raise ValueError('unsupported: ', device)
+
+
+def device_to_int(device):
+    """
+    Returns:
+        -1 for CPU
+        int index for GPU
+    """
+    device = id_to_device(device)
+    if device == CPU_DEVICE:
+        return -1
+    else:
+        return device.index if device.index else 0
 
 
 def ids_to_devices(devices):
@@ -113,6 +160,14 @@ def set_default_device_dtype(device, dtype):
     torch.set_default_dtype(dtype)
 
 
+def get_torchx_device_dtype():
+    if _PYTORCH_DEVICES_:
+        return _PYTORCH_DEVICES_[-1]
+    else:
+        device, dtype = get_default_device_dtype()
+        return [device], dtype
+
+
 @contextlib.contextmanager
 def device_scope(device, dtype=torch.float32, override_parent=True):
     """
@@ -153,12 +208,6 @@ def device_scope(device, dtype=torch.float32, override_parent=True):
     devices = ids_to_devices(device)
     if len(devices) > 1:
         assert CPU_DEVICE not in devices, 'cannot mix CPU with other devices'
-        # must be either CPU or the first GPU
-        # https://github.com/pytorch/pytorch/issues/1280
-        if devices[0].index not in [0, None]:
-            print('For multiGPU training, the first GPU index should be 0. ' 
-                  'You can set CUDA_VISIBLE_DEVICES env variable to work around.',
-                  file=sys.stderr)
     if count == 0 and devices[0].type != 'cpu':
         print('WARNING: no GPU found, fall back to CPU.', file=sys.stderr)
         devices = [CPU_DEVICE]
@@ -174,9 +223,4 @@ def device_scope(device, dtype=torch.float32, override_parent=True):
 
     _PYTORCH_DEVICES_.pop()
     set_default_device_dtype(old_device, old_dtype)
-
-
-# ========================================================
-# ================== tensor creation ops =================
-# ========================================================
 

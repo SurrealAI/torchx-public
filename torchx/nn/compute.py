@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from torch.autograd import Variable
+import torch.nn as nn
 import torchx.utils as U
 
 
@@ -15,18 +15,6 @@ def th_median_abs(t):
     return th_median(t.abs())
 
 
-def th_ones_like(tensor):
-    s = U.get_shape(tensor)
-    assert s is not None
-    return torch.ones(s)
-
-
-def th_zeros_like(tensor):
-    s = U.get_shape(tensor)
-    assert s is not None
-    return torch.zeros(s)
-
-
 def th_normalize_feature(feats):
     """
     Normalize the whole dataset as one giant feature matrix
@@ -39,6 +27,8 @@ def th_normalize_feature(feats):
 def th_where(cond, x1, x2):
     """
     Similar to np.where and tf.where
+
+    Deprecated: torch v0.4 adds `torch.where()`
     """
     cond = cond.type_as(x1)
     return cond * x1 + (1 - cond) * x2
@@ -48,6 +38,8 @@ def th_huber_loss_per_element(x, y=None, delta=1.0):
     """
     Args:
         if y is not None, compute huber_loss(x - y)
+
+    Deprecated: torch v0.4 adds `reduce=True/False` keyword to all loss functions
     """
     if y is not None:
         x = x - y
@@ -70,8 +62,8 @@ def th_norm(tensor, norm_type=2):
 
 def th_clip_norm(tensor, clip, norm_type=2, in_place=False):
     """
-    original src:
-    http://pytorch.org/docs/0.2.0/_modules/pytorch/nn/utils/clip_grad.html#net_clip_grad_norm
+    Deprecated: torch v0.4 adds nn.utils.clip_grad_norm_
+    http://pytorch.org/docs/stable/nn.html?highlight=clip#torch.nn.utils.clip_grad_norm_
     """
     norm = th_norm(tensor, norm_type)
     clip_coef = clip / (norm + 1e-6)
@@ -91,6 +83,18 @@ def th_flatten(x):
     return x.contiguous().view(x.size(0), -1)
 
 
+def _get_param_list(obj):
+    """
+    Args:
+        obj: if nn.Module instance, get its parameter list
+            otherwise return itself
+    """
+    if isinstance(obj, nn.Module):
+        return obj.parameters()
+    else:
+        return obj
+
+
 def th_global_avg_pool(x):
     """
     https://arxiv.org/pdf/1312.4400.pdf
@@ -106,3 +110,67 @@ def th_global_max_pool(x):
     return x.view(N, C, H * W).max(dim=2)[0].squeeze(dim=2)
 
 
+def th_flatten_tensors(tensors_or_module):
+    """
+    Flatten tensors into a single contiguous 1D buffer
+    https://github.com/pytorch/pytorch/blob/master/torch/_utils.py
+    """
+    tensors = list(_get_param_list(tensors_or_module))
+    if len(tensors) == 1:
+        return tensors[0].contiguous().view(-1)
+    numels = [tensor.numel() for tensor in tensors]
+    size = sum(numels)
+    offset = 0
+    flat = tensors[0].new_empty(size)
+    for tensor, numel in zip(tensors, numels):
+        flat.narrow(0, offset, numel).copy_(tensor, broadcast=False)
+        offset += numel
+    return flat
+
+
+def th_unflatten_tensors(flat, tensors_or_module):
+    """View a flat buffer using the sizes of tensors"""
+    outputs = []
+    offset = 0
+    for tensor in _get_param_list(tensors_or_module):
+        numel = tensor.numel()
+        outputs.append(flat.narrow(0, offset, numel).view_as(tensor))
+        offset += numel
+    return tuple(outputs)
+
+
+def th_copy_module(module1, module2):
+    """
+    Assign net1's parameters to net2
+    """
+    module2.load_state_dict(module1.state_dict())
+
+
+def th_soft_update(target, source, tau):
+    """
+    Args:
+        target: torch Module or list of tensors
+        source: torch Module or list of tensors
+    """
+    target = _get_param_list(target)
+    source = _get_param_list(source)
+    with torch.no_grad():
+        for target_param, param in zip(target, source):
+            target_param.copy_(
+                target_param * (1.0 - tau) + param * tau
+            )
+
+
+def th_hard_update(target, source):
+    """
+    Hard update parameters.
+
+    Args:
+        target: torch Module or list of tensors
+        source: torch Module or list of tensors
+    """
+    target = _get_param_list(target)
+    source = _get_param_list(source)
+    with torch.no_grad():
+        for target_param, param in zip(target, source):
+            target_param.copy_(param)

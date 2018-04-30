@@ -6,162 +6,71 @@ import os
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from .compute import th_clip_norm
-from torchx.device import device_scope
+import numpy as np
+from torchx.device import get_torchx_device_dtype, device_to_int
 from torchx.utils.common import SaveInitArgs
+from torchx.nn.compute import *
 
 
-def _net_or_parameters(net):
-    if isinstance(net, torch.nn.Module):
-        return net.parameters()
+def DataParallel(module, output_device=None, dim=0):
+    """
+    Reads the device scope from torchx.
+    If the device in scope is CPU, this wrapper will be no op.
+    """
+    devices, dtype = get_torchx_device_dtype()
+    if devices[0] == torch.device('cpu'):
+        return module
     else:
-        return net
-
-
-def set_requires_grad(net, requires_grad):
-    """
-    no gradients computed
-    http://pytorch.org/docs/master/notes/autograd.html?highlight=volatile
-    """
-    for param in _net_or_parameters(net):
-        param.requires_grad = requires_grad
-    return net
-
-
-def net_freeze(net):
-    return set_requires_grad(net, requires_grad=False)
-
-
-def net_unfreeze(net):
-    return set_requires_grad(net, requires_grad=True)
-
-
-def net_copy(net1, net2):
-    """
-    Assign net1's parameters to net2
-    """
-    net2.load_state_dict(net1.state_dict())
-
-
-def net_clip_grad_value(net, clip_value):
-    for param in _net_or_parameters(net):
-        if param.grad is None:
-            continue
-        if clip_value < 0:
-            raise ValueError('{} is not a valid gradient clip value.'.format(clip_value))
-        param.grad.data.clamp_(-float(clip_value), float(clip_value))
-    return net
-
-
-def net_clip_grad_norm(net, clip, *, norm_type=2):
-    """
-    Unlike pytorch.nn.utils.net_clip_grad_norm,
-    this function clips norm by every parameter
-    original src:
-    http://pytorch.org/docs/0.2.0/_modules/pytorch/nn/utils/clip_grad.html#net_clip_grad_norm
-    """
-    for param in _net_or_parameters(net):
-        grad = param.grad
-        if grad is None:
-            continue
-        th_clip_norm(grad.data, clip, norm_type=norm_type, in_place=True)
-    return net
-
-
-def th_flatten_tensors(tensors):
-    """
-    Flatten tensors into a single contiguous 1D buffer
-    https://github.com/pytorch/pytorch/blob/master/torch/_utils.py
-    """
-    if len(tensors) == 1:
-        return tensors[0].contiguous().view(-1)
-    numels = [tensor.numel() for tensor in tensors]
-    size = sum(numels)
-    offset = 0
-    flat = tensors[0].new(size)
-    for tensor, numel in zip(tensors, numels):
-        flat.narrow(0, offset, numel).copy_(tensor, broadcast=False)
-        offset += numel
-    return flat
-
-
-def th_unflatten_tensors(flat, tensors):
-    """View a flat buffer using the sizes of tensors"""
-    outputs = []
-    offset = 0
-    for tensor in tensors:
-        numel = tensor.numel()
-        outputs.append(flat.narrow(0, offset, numel).view_as(tensor))
-        offset += numel
-    return tuple(outputs)
-
-
-def th_soft_update(target, source, tau):
-    for target_param, param in zip(target.parameters(), source.parameters()):
-        target_param.data.copy_(
-            target_param.data * (1.0 - tau) + param.data * tau
+        device_ids = [device_to_int(dev) for dev in devices]
+        return nn.DataParallel(
+            module,
+            device_ids=device_ids,
+            output_device=output_device,
+            dim=dim
         )
-
-
-def th_hard_update(target, source):
-    for target_param, param in zip(target.parameters(), source.parameters()):
-            target_param.data.copy_(param.data)
 
 
 class Module(nn.Module, SaveInitArgs):
     """
     All models in Surreal should extend this module, not pytorch one
     """
-    def __init__(self):
-        super().__init__()
-        self._gpu_ids = [-1]
-        # guard is for nn.DataParallel in __call__, because we override
-        # nn.Module's __call__ and the wrapper gets confused.
-        self._infinite_recursion_guard = False
-
-    def freeze(self):
-        return net_freeze(self)
-
-    def unfreeze(self):
-        return net_unfreeze(self)
-
-    def copy_from(self, other_net):
-        net_copy(other_net, self)
-        return self
-
-    def copy_to(self, other_net):
-        net_copy(self, other_net)
-        return self
-
     def __call__(self, *args, **kwargs):
         """
-        transfer to GPU before forward pass
-        - if scope_gpu list has only one ID, send Module to that device
-        - if scope_gpu list has more than one, automatically wrap with nn.DataParallel
+        transfer to the device in torchx scope before forward pass
         """
-        if self._infinite_recursion_guard:
-            return super().__call__(*args, **kwargs)
-        scope_gpu_ids = get_scope_device()  # from torch_gpu_scope() context
-        assert isinstance(scope_gpu_ids, list), 'internal error, must be list'
-        self._gpu_ids = scope_gpu_ids
-        if len(scope_gpu_ids) == 1:  # simply send to that device
-            gpu_id = self._gpu_ids[0]
-            if gpu_id >= 0:
-                self.cuda(gpu_id)
-            return super().__call__(*args, **kwargs)
-        else:  # DataParallel
-            parallel_wrapped = nn.DataParallel(self, device_ids=self._gpu_ids)
-            parallel_wrapped.cuda()
-            self._infinite_recursion_guard = True
-            result = parallel_wrapped(*args, **kwargs)
-            self._infinite_recursion_guard = False
-            return result
+        devices, dtype = get_torchx_device_dtype()
+        self.to(device=devices[0], dtype=dtype)
+        return super().__call__(*args, **kwargs)
 
-    def clip_grad_value(self, clip):
-        return net_clip_grad_value(self, clip)
+    def copy_from(self, other_module):
+        th_copy_module(other_module, self)
+        return self
 
-    def clip_grad_norm(self, clip, norm_type=2):
-        return net_clip_grad_norm(self, clip, norm_type=norm_type)
+    def copy_to(self, other_module):
+        th_copy_module(self, other_module)
+        return self
+
+    def soft_update(self, other_module, tau):
+        th_soft_update(target=self, source=other_module, tau=tau)
+
+    def hard_update(self, other_module, tau):
+        th_hard_update(target=self, source=other_module)
+
+    def clip_grad_value(self, max_value):
+        with torch.no_grad():
+            nn.utils.clip_grad_value_(self.parameters(), max_value)
+
+    def clip_grad_norm(self, max_norm, norm_type=2):
+        """
+        Returns:
+            Total norm of the parameters (viewed as a single vector).
+        """
+        with torch.no_grad():
+            return nn.utils.clip_grad_norm_(
+                self.parameters(),
+                max_norm=max_norm,
+                norm_type=norm_type
+            )
 
     def save(self, fname):
         save_dict = OrderedDict()
@@ -181,38 +90,21 @@ class Module(nn.Module, SaveInitArgs):
         net.load_state_dict(save_dict['torch'])
         return net
 
-    # Note: Currently unused and these code will not serialize everything needed to 
-    # replicate module state. They will only serialize parameters.
-    # 
-    # def parameters_to_binary(self):
-    #     params = [param.data for param in self.parameters()]
-    #     flattened = th_flatten_tensors(params)
-    #     return flattened.cpu().numpy().tostring()
+    def parameters_to_binary(self):
+        flattened = th_flatten_tensors(self)
+        return flattened.cpu().numpy().tostring()
 
-    # def parameters_hash(self):
-    #     return binary_hash(self.parameters_to_binary())
-
-    # def parameters_from_binary(self, binary):
-    #     """
-    #     Assumes np.float32
-    #     """
-    #     buffer = np.fromstring(binary, dtype=np.float32)
-    #     buffer = torch.from_numpy(buffer)
-    #     params = [param.data for param in self.parameters()]
-    #     new_params = th_unflatten_tensors(buffer, params)
-    #     with self._forward_lock:
-    #         for p, n in zip(params, new_params):
-    #             p.copy_(n)
-
-    def clone(self, no_grad=True):
+    def parameters_from_binary(self, binary):
         """
-        The target Q network should not do any backprop
+        Assumes np.float32
         """
-        qcopy = type(self)(**self.init_args).copy_from(self)
-        if no_grad:
-            qcopy.freeze()
-        return qcopy
+        buffer = np.fromstring(binary, dtype=np.float32)
+        buffer = torch.from_numpy(buffer)
+        new_params = th_unflatten_tensors(buffer, self)
+        with torch.no_grad():
+            for p, n in zip(self.parameters(), new_params):
+                p.copy_(n)
 
-    @property
-    def is_cuda(self):
-        return self._gpu_ids[0] >= 0
+    def clone(self):
+        return type(self)(**self.init_args).copy_from(self)
+
