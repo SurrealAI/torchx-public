@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .core import Layer
+from .base import Layer
 import torchx.utils as U
 
 

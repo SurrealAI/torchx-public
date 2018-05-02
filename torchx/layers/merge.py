@@ -1,7 +1,7 @@
 import torch
 
 import torchx.utils as U
-from .core import Layer
+from .base import Layer
 
 
 class MergeLayer(Layer):

@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from .core import Layer
+from .base import Layer
 from .placeholder import PlaceholderStruct
 import torchx.utils as U
 
