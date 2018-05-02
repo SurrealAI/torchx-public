@@ -32,4 +32,6 @@ def test_slice():
 
     check_slice([50, 60, 17], G[3:-1:3, 0, :])
     check_slice([50, 6, 170], G[..., 2:160:3])
+    check_slice([50, 6, 17], G[0, 1, -1])
+    check_slice([50, 6, 17], G[:0, ...])
 
