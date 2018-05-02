@@ -27,19 +27,19 @@ class Placeholder:
         return slice(self, key)
 
     def __add__(self, p2):
-        from .merge_layers import add
+        from .merge import add
         return add(self, p2)
 
     def __sub__(self, p2):
-        from .merge_layers import subtract
+        from .merge import subtract
         return subtract(self, p2)
 
     def __mul__(self, p2):
-        from .merge_layers import multiply
+        from .merge import multiply
         return multiply(self, p2)
 
     def __truediv__(self, p2):
-        from .merge_layers import divide
+        from .merge import divide
         return divide(self, p2)
 
 
