@@ -23,7 +23,7 @@ class Placeholder:
         return 'P{}'.format(self.shape)
 
     def __getitem__(self, key):
-        from .misc_layers import slice
+        from .reshape import slice
         return slice(self, key)
 
     def __add__(self, p2):

@@ -5,7 +5,7 @@ from .linear import *
 from .conv import *
 from .activation import *
 from .merge import *
-from .misc_layers import *
+from .reshape import *
 from .rnn import *
 
 
