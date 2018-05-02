@@ -3,7 +3,10 @@ from .base import *
 from .container import *
 from .linear import *
 from .conv import *
+from .pooling import *
 from .activation import *
+from .dropout import *
+from .normalization import *
 from .merge import *
 from .reshape import *
 from .rnn import *
