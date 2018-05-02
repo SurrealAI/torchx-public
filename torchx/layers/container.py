@@ -6,6 +6,9 @@ import torchx.utils as U
 
 
 class Lambda(Layer):
+    """
+    Call wrap_same_shape(function) to wrap a pytorch builtin module into Lambda
+    """
     def __init__(self, function, get_output_shape=None, *, input_shape=None):
         """
         Lambda layer must not have learnable parameters.
@@ -35,6 +38,14 @@ class Lambda(Layer):
     def get_output_shape(self, input_shape):
         return self._lambda_output_shape(input_shape)
 
+    @classmethod
+    def wrap_same_shape(cls, function):
+        return cls(
+            function=function,
+            get_output_shape=None,
+            input_shape=None
+        )
+
 
 class Sequential(Layer):
     def __init__(self, layer_list, *, input_shape=None):
@@ -60,12 +71,8 @@ class Sequential(Layer):
         if isinstance(layer, Layer):
             return layer
         else:
-            return Lambda(
-                function=layer,
-                get_output_shape=None,
-                # first layer in Sequential must have input_shape != None
-                input_shape=None,
-            )
+            # first layer in Sequential must have input_shape != None
+            return Lambda.wrap_same_shape(layer)
 
     def add(self, layers):
         """
