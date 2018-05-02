@@ -36,17 +36,17 @@ class ConvNd(Layer):
         )
 
 
-class Conv1D(ConvNd):
+class Conv1d(ConvNd):
     def __init__(self, *args, **kwargs):
         super().__init__(1, *args, **kwargs)
 
 
-class Conv2D(ConvNd):
+class Conv2d(ConvNd):
     def __init__(self, *args, **kwargs):
         super().__init__(2, *args, **kwargs)
 
 
-class Conv3D(ConvNd):
+class Conv3d(ConvNd):
     def __init__(self, *args, **kwargs):
         super().__init__(3, *args, **kwargs)
 
@@ -85,17 +85,17 @@ class ConvTransposeNd(Layer):
         )
 
 
-class ConvTranspose1D(ConvTransposeNd):
+class ConvTranspose1d(ConvTransposeNd):
     def __init__(self, *args, **kwargs):
         super().__init__(1, *args, **kwargs)
 
 
-class ConvTranspose2D(ConvTransposeNd):
+class ConvTranspose2d(ConvTransposeNd):
     def __init__(self, *args, **kwargs):
         super().__init__(2, *args, **kwargs)
 
 
-class ConvTranspose3D(ConvTransposeNd):
+class ConvTranspose3d(ConvTransposeNd):
     def __init__(self, *args, **kwargs):
         super().__init__(3, *args, **kwargs)
 
@@ -128,17 +128,17 @@ class MaxPoolNd(Layer):
         )
 
 
-class MaxPool1D(MaxPoolNd):
+class MaxPool1d(MaxPoolNd):
     def __init__(self, *args, **kwargs):
         super().__init__(1, *args, **kwargs)
 
 
-class MaxPool2D(MaxPoolNd):
+class MaxPool2d(MaxPoolNd):
     def __init__(self, *args, **kwargs):
         super().__init__(2, *args, **kwargs)
 
 
-class MaxPool3D(MaxPoolNd):
+class MaxPool3d(MaxPoolNd):
     def __init__(self, *args, **kwargs):
         super().__init__(3, *args, **kwargs)
 
@@ -160,16 +160,16 @@ class AvgPoolNd(MaxPoolNd):
         )
 
 
-class AvgPool1D(AvgPoolNd):
+class AvgPool1d(AvgPoolNd):
     def __init__(self, *args, **kwargs):
         super().__init__(1, *args, **kwargs)
 
 
-class AvgPool2D(AvgPoolNd):
+class AvgPool2d(AvgPoolNd):
     def __init__(self, *args, **kwargs):
         super().__init__(2, *args, **kwargs)
 
 
-class AvgPool3D(AvgPoolNd):
+class AvgPool3d(AvgPoolNd):
     def __init__(self, *args, **kwargs):
         super().__init__(3, *args, **kwargs)

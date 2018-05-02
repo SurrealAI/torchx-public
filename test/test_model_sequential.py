@@ -46,17 +46,17 @@ def test_conv_sequential():
     x = new_tensor(input_shape)
 
     model = Sequential([
-        Conv2D(21,
+        Conv2d(21,
                input_shape=input_shape,
                kernel_size=(5, 3),
                padding=(14, 16)),
         nn.ReLU(),
-        Conv2D(15,
+        Conv2d(15,
                kernel_size=(3, 17),
                stride=(4, 5),
                padding=35),
         nn.LeakyReLU(0.3),
-        MaxPool2D(kernel_size=13,
+        MaxPool2d(kernel_size=13,
                   stride=(1, 3),
                   dilation=2,
                   padding=(5, 6)),
@@ -64,13 +64,13 @@ def test_conv_sequential():
     check_inferred_shape('conv before flatten', locals())
 
     model.add([
-        Conv2D(5,
+        Conv2d(5,
                kernel_size=(15, 11),
                stride=2,
                dilation=(3, 4),
                padding=45),
         nn.LeakyReLU(0.1),
-        AvgPool2D((2, 3),
+        AvgPool2d((2, 3),
                   stride=None,
                   padding=1),
         nn.ELU(),
@@ -198,12 +198,12 @@ def test_time_distributed():
     x = new_tensor(input_shape)
 
     model = TimeDistributed([
-        Conv2D(4,
+        Conv2d(4,
                kernel_size=(5, 3),
                dilation=2,
                padding=(14, 16)),
         nn.ReLU(),
-        Conv2D(2,
+        Conv2d(2,
                kernel_size=(1, 3),
                stride=(2, 1),
                padding=10),
@@ -213,7 +213,7 @@ def test_time_distributed():
     check_inferred_shape('TimeDistributed conv', locals())
 
     model.add(
-        MaxPool2D(kernel_size=(5, 3),
+        MaxPool2d(kernel_size=(5, 3),
                   stride=(3, 2)),
     )
     check_inferred_shape('TimeDistributed conv add again', locals())
