@@ -7,7 +7,7 @@ import torchx.utils as U
 
 class Lambda(Layer):
     """
-    Call wrap_same_shape(function) to wrap a pytorch builtin module into Lambda
+    Call wrap_same_shape_class(cls) to wrap a pytorch builtin module into Lambda
     """
     def __init__(self, function, get_output_shape=None, *, input_shape=None):
         """
@@ -38,13 +38,23 @@ class Lambda(Layer):
     def get_output_shape(self, input_shape):
         return self._lambda_output_shape(input_shape)
 
-    @classmethod
-    def wrap_same_shape(cls, function):
-        return cls(
-            function=function,
-            get_output_shape=None,
-            input_shape=None
-        )
+    @staticmethod
+    def wrap_same_shape_class(cls, cls_name):
+        """
+        Convert a builtin torch.nn module class into a subclass of Lambda
+        """
+        assert issubclass(cls, nn.Module)
+
+        class _Wrapped(Lambda):
+            def __init__(self, *args, input_shape=None, **kwargs):
+                super().__init__(
+                    function=cls(*args, **kwargs),
+                    get_output_shape=None,
+                    input_shape=input_shape
+                )
+
+        _Wrapped.__name__ = cls_name
+        return _Wrapped
 
 
 class Sequential(Layer):
@@ -54,7 +64,7 @@ class Sequential(Layer):
         first layer in `layer_list`
         """
         assert len(layer_list) >= 1
-        self.layer_list = list(map(self._wrap_same_shape_lambda, layer_list))
+        self.layer_list = list(map(self._wrap_same_shape, layer_list))
         if input_shape is None:
             input_shape = self.layer_list[0].input_shape
         super().__init__(input_shape=input_shape)
@@ -66,13 +76,13 @@ class Sequential(Layer):
         input_shape = self.get_output_shape(self.input_shape)
         layer.build(input_shape)
 
-    def _wrap_same_shape_lambda(self, layer):
+    def _wrap_same_shape(self, layer):
         "Wrap builtin layers that don't change shape with Lambda layer"
         if isinstance(layer, Layer):
             return layer
         else:
             # first layer in Sequential must have input_shape != None
-            return Lambda.wrap_same_shape(layer)
+            return Lambda(layer, get_output_shape=None)
 
     def add(self, layers):
         """
@@ -82,7 +92,7 @@ class Sequential(Layer):
         if not isinstance(layers, (list, tuple)):
             layers = [layers]
         for layer in layers:
-            layer = self._wrap_same_shape_lambda(layer)
+            layer = self._wrap_same_shape(layer)
             if self.is_built:
                 assert self.input_shape is not None, 'internal error'
                 self._add_after_build(layer)

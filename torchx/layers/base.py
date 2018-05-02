@@ -194,3 +194,22 @@ class Layer(Module, metaclass=_LayerMeta):
         ), ('actual tensor shape does not match input_shape at build time',
             tensors_shape, self.input_shape)
         return super().__call__(*args, **kwargs)
+
+
+def get_torch_builtin_modules(pkg_name):
+    """
+    Args:
+        pkg_name: pkgs in torch.nn.modules
+
+    Returns:
+        dict {module_name: module_class}
+    """
+    assert hasattr(nn.modules, pkg_name), \
+        'pkg must be one of '+str([m for m in dir(nn.modules) if not m.startswith('_')])
+    exclude = ['Parameter', 'F', 'Module']
+    builtins = {}
+    pkg = getattr(nn.modules, pkg_name)
+    for cls_name in dir(pkg):
+        if cls_name[0].isupper() and cls_name not in exclude:
+            builtins[cls_name] = getattr(pkg, cls_name)
+    return builtins
