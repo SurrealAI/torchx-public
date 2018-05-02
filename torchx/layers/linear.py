@@ -23,7 +23,14 @@ class Dense(Layer):
             input_features = self.input_shape[-1]
         else:
             input_features = None
-        return 'Dense({}->{})'.format(input_features, self.out_features)
+        return '{}({}->{})'.format(
+            self.__class__.__name__, input_features, self.out_features
+        )
+
+
+class Linear(Dense):
+    "alias"
+    pass
 
 
 # def fc_layers(input_size, output_size, hiddens, initializer='xavier'):
