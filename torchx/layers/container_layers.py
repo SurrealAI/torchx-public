@@ -1,8 +1,39 @@
 import torch.nn as nn
 
-from .core import Layer, SameShapeAdapter
+from .core import Layer
 from .placeholder import PlaceholderStruct
 import torchx.utils as U
+
+
+class Lambda(Layer):
+    def __init__(self, function, get_output_shape=None, *, input_shape=None):
+        """
+        Lambda layer must not have learnable parameters.
+
+        Args:
+            function: take input tensor as argument.
+            get_output_shape: a function that takes input shape and
+                returns output shape
+                if None, return the same output shape as input
+            input_shape: specify keyword input_shape if this layer is used as
+                the first layer
+        """
+        super().__init__(input_shape=input_shape)
+        assert callable(function)
+        self._lambda_forward = function
+        if get_output_shape is None:  # same shape adapter
+            get_output_shape = lambda input_shape: input_shape
+        assert callable(get_output_shape)
+        self._lambda_output_shape = get_output_shape
+
+    def _build(self, input_shape):
+        pass
+
+    def forward(self, *args, **kwargs):
+        return self._lambda_forward(*args, **kwargs)
+
+    def get_output_shape(self, input_shape):
+        return self._lambda_output_shape(input_shape)
 
 
 class Sequential(Layer):
@@ -12,9 +43,9 @@ class Sequential(Layer):
         first layer in `layer_list`
         """
         assert len(layer_list) >= 1
-        self.layer_list = list(map(SameShapeAdapter, layer_list))
+        self.layer_list = list(map(self._wrap_same_shape_lambda, layer_list))
         if input_shape is None:
-            input_shape = layer_list[0].input_shape
+            input_shape = self.layer_list[0].input_shape
         super().__init__(input_shape=input_shape)
         # ModuleList must be created after init, otherwise PyTorch error
         self.module_list = nn.ModuleList()
@@ -24,22 +55,32 @@ class Sequential(Layer):
         input_shape = self.get_output_shape(self.input_shape)
         layer.build(input_shape)
 
+    def _wrap_same_shape_lambda(self, layer):
+        "Wrap builtin layers that don't change shape with Lambda layer"
+        if isinstance(layer, Layer):
+            return layer
+        else:
+            return Lambda(
+                function=layer,
+                get_output_shape=None,
+                # first layer in Sequential must have input_shape != None
+                input_shape=None,
+            )
+
     def add(self, layers):
         """
         Args:
             layer: can be a single Layer or a list of Layers
         """
-        if isinstance(layers, (list, tuple)):
-            for layer in layers:
-                self.add(layer)
-            return
-
-        layer = SameShapeAdapter(layers)
-        if self.is_built:
-            assert self.input_shape is not None, 'internal error'
-            self._add_after_build(layer)
-            self.module_list.append(layer)
-        self.layer_list.append(layer)
+        if not isinstance(layers, (list, tuple)):
+            layers = [layers]
+        for layer in layers:
+            layer = self._wrap_same_shape_lambda(layer)
+            if self.is_built:
+                assert self.input_shape is not None, 'internal error'
+                self._add_after_build(layer)
+                self.module_list.append(layer)
+            self.layer_list.append(layer)
 
     def _build(self, input_shape):
         for layer in self.layer_list:

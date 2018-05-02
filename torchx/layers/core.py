@@ -12,6 +12,7 @@ def _register_layer_cls(layer_cls):
 
 
 def _get_layer_cls(cls_name):
+    # TODO: FIX
     """
     Prioritize user-defined Layer classes (in _LAYER_REGISTRY)
     if not found, get module class from `torch.nn` and apply SameShapeAdapter
@@ -193,38 +194,3 @@ class Layer(Module, metaclass=_LayerMeta):
         ), ('actual tensor shape does not match input_shape at build time',
             tensors_shape, self.input_shape)
         return super().__call__(*args, **kwargs)
-
-
-def SameShapeAdapter(layer):
-    if inspect.isclass(layer):
-        if issubclass(layer, Layer):
-            return layer
-
-        class _SameShapeAdapter(Layer):
-            """
-            Adapts an existing torch.nn.<layer>, assume the same input and output shape
-            """
-            def __init__(self, *args, **kwargs):
-                # input_shape does not matter, just set a non-None value
-                super().__init__(input_shape='_placeholder_', **kwargs)
-                self.init_args = args
-
-            def _build(self, input_shape):
-                return layer(*self.init_args, **self.init_kwargs)
-
-            def get_output_shape(self, input_shape):
-                assert U.is_simple_shape(input_shape)
-                return input_shape
-
-        return _SameShapeAdapter
-
-    else:  # layer is an instantiated object
-        if isinstance(layer, Layer):
-            return layer
-        # duck typing, fake the abstract class methods
-        layer.input_shape = None
-        layer.build = lambda input_shape=None: None
-        layer.get_output_shape = lambda input_shape: input_shape
-        return layer
-
-
