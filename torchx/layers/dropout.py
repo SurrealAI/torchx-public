@@ -9,12 +9,12 @@ def _generate_code():
     print('#', '='*25, 'generated', '='*25)
     print('_wrap = Lambda.wrap_same_shape_class\n')
     for cls_name in get_torch_builtin_modules(pkg):
-        print(cls_name, '=', "_wrap(_builtin.{0}, '{0}')".format(cls_name))
+        print(cls_name, '=', "_wrap(_builtin.{0})".format(cls_name))
 
 # ========================= generated =========================
 _wrap = Lambda.wrap_same_shape_class
 
-AlphaDropout = _wrap(_builtin.AlphaDropout, 'AlphaDropout')
-Dropout = _wrap(_builtin.Dropout, 'Dropout')
-Dropout2d = _wrap(_builtin.Dropout2d, 'Dropout2d')
-Dropout3d = _wrap(_builtin.Dropout3d, 'Dropout3d')
+AlphaDropout = _wrap(_builtin.AlphaDropout)
+Dropout = _wrap(_builtin.Dropout)
+Dropout2d = _wrap(_builtin.Dropout2d)
+Dropout3d = _wrap(_builtin.Dropout3d)

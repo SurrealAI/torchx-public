@@ -39,7 +39,7 @@ class Lambda(Layer):
         return self._lambda_output_shape(input_shape)
 
     @staticmethod
-    def wrap_same_shape_class(cls, cls_name):
+    def wrap_same_shape_class(cls, cls_name=None):
         """
         Convert a builtin torch.nn module class into a subclass of Lambda
         """
@@ -53,6 +53,8 @@ class Lambda(Layer):
                     input_shape=input_shape
                 )
 
+        if not cls_name:
+            cls_name = cls.__name__
         _Wrapped.__name__ = cls_name
         return _Wrapped
 
