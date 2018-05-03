@@ -29,9 +29,9 @@ def test_dense_sequential():
 
     model = Sequential([
         Dense(93),
-        nn.ReLU(),
+        nn.ReLU(),  # builtin pytorch, will be auto-wrapped into torchx.Layer
         Dense(42),
-        nn.LeakyReLU(0.1),
+        LeakyReLU(0.1),  # torchx.layers
         Dense(77)
     ])
     check_inferred_shape('dense', locals())
@@ -45,7 +45,7 @@ def test_conv_sequential():
         Conv2d(21,
                kernel_size=(5, 3),
                padding=(14, 16)),
-        nn.ReLU(),
+        ReLU(),
         Conv2d(15,
                kernel_size=(3, 17),
                stride=(4, 5),
@@ -64,11 +64,11 @@ def test_conv_sequential():
                stride=2,
                dilation=(3, 4),
                padding=45),
-        nn.LeakyReLU(0.1),
+        LeakyReLU(0.1),
         AvgPool2d((2, 3),
                   stride=None,
                   padding=1),
-        nn.ELU(),
+        ELU(),
         Flatten(),
     ])
     check_inferred_shape('conv after flatten', locals())
@@ -90,7 +90,7 @@ def test_rnn_without_state():
     model = Sequential([
         SimpleRNN(23,
                   return_sequences=True),
-        nn.ReLU(),
+        SELU(),
         GetRNNOutput(),  # essentially no-op
     ])
     check_inferred_shape('SimpleRNN, seq=True', locals())
@@ -100,7 +100,7 @@ def test_rnn_without_state():
             return_sequences=False,
             num_layers=2,
             bidirectional=True),
-        nn.ReLU(),
+        Tanh(),
     ])
     check_inferred_shape('GRU, seq=False', locals())
 
@@ -149,7 +149,7 @@ def test_rnn_with_state():
             num_layers=4,
             bidirectional=True),
         GetRNNOutput(),
-        nn.ReLU()
+        PReLU()
     ])
     check_inferred_shape('GRU, output', locals())
 
@@ -163,7 +163,7 @@ def test_rnn_with_state():
     check_inferred_shape('LSTM, seq=True', locals())
     model.add([
         GetRNNState(mode='c'),
-        nn.ReLU()
+        PReLU()
     ])
     check_inferred_shape('LSTM, mode=c', locals())
 

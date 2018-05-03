@@ -4,39 +4,16 @@ import torchx.utils as U
 from torchx.nn import Module
 from .placeholder import PlaceholderStruct
 
-_LAYER_REGISTRY = {}
-
-
-def _register_layer_cls(layer_cls):
-    _LAYER_REGISTRY[layer_cls.__name__] = layer_cls
-
-
-def _get_layer_cls(cls_name):
-    # TODO: FIX
-    """
-    Prioritize user-defined Layer classes (in _LAYER_REGISTRY)
-    if not found, get module class from `torch.nn` and apply SameShapeAdapter
-    """
-    if cls_name in _LAYER_REGISTRY:
-        return _LAYER_REGISTRY[cls_name]
-    elif hasattr(nn, cls_name):
-        cls = getattr(nn, cls_name)
-        assert callable(cls), 'torch.nn.{} invalid'.format(cls_name)
-        return SameShapeAdapter(cls)
-    else:
-        raise ValueError('Layer class "{}" not found'.format(cls_name))
-
 
 class _LayerMeta(U.SaveInitArgsMeta):
+    # extend from SaveInitArgs to be compatible with torchx.nn.Module's metaclass
+    _registry = {}
+
     # inherit to avoid metaclass conflict with U.Module
     def __new__(cls, name, bases, class_dict):
         cls = type.__new__(cls, name, bases, class_dict)
-        _register_layer_cls(cls)
+        _LayerMeta._registry[cls.__name__] = cls
         return cls
-
-
-def get_layer_registry():
-    return _LAYER_REGISTRY
 
 
 class Layer(Module, metaclass=_LayerMeta):
@@ -79,7 +56,6 @@ class Layer(Module, metaclass=_LayerMeta):
         Returns:
             self
         """
-        # TODO extend is_valid_shape
         assert U.is_valid_shape(input_shape)
         if not self.is_built:
             self.input_shape = input_shape
@@ -160,6 +136,10 @@ class Layer(Module, metaclass=_LayerMeta):
         tensors_shape = U.get_shape(tensors)
         self.build(tensors_shape)  # will only build once
         return super().__call__(*args, **kwargs)
+
+    @staticmethod
+    def get_registry():
+        return _LayerMeta._registry
 
 
 def get_torch_builtin_modules(pkg_name):

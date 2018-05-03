@@ -92,13 +92,13 @@ def single_node_testcases(input_case_id, output_case_id):
 
     x = Placeholder(x_shape)
     y = Placeholder(y_shape)
-    w1 = concat(Dense(22)(x), Dense(44)(y))
+    w1 = concat(Dense(22)(x), Sigmoid()(Dense(44)(y)))
     assert w1.shape == (12, 66)
     w2 = concat(Dense(33)(w1), Dense(55)(w1[:, :33] / w1[:, 33:]))
     assert w2.shape == (12, 88)
     w3 = concat(Dense(11)(w2), Dense(66)(w2[:, 10:40] / w2[:, 20:50]))
     assert w3.shape == (12, 77)
-    w4 = concat(Dense(7)(w3 * w3), Dense(17)(w3))
+    w4 = Tanh()(concat(Dense(7)(w3 * w3), Dense(17)(w3)))
     assert w4.shape == (12, 24)
     out1 = multiply(subtract(w4, Dense(7+17)(w3)), Dense(7+17)(concat(w4, w3, w4)))
     assert out1.shape == (12, 24)
@@ -148,7 +148,7 @@ def multi_node_testcases(input_case_id, output_case_id):
     x1 = Dense(22)(x0)
     y1 = Dense(22)(y0)
     shared1 = Dense(17)
-    out1 = concat(shared1(x1), shared1(y1), shared1(x1))
+    out1 = ReLU6()(concat(shared1(x1), shared1(y1), shared1(x1)))
     assert out1.shape == (12, 51)
     concat_xyx = concat(x1, y1, x1)[:, :17*3]
     assert concat_xyx.shape == (12, 51)
@@ -157,10 +157,10 @@ def multi_node_testcases(input_case_id, output_case_id):
     shared2 = Dense(47)
     shared3 = Dense(47)
     out2 = average(
-        shared2(concat_xyx),
+        PReLU()(shared2(concat_xyx)),
         shared2(out1),
         shared2(concat_xyx),
-        shared3(out1 + concat_yxy + out1),
+        SELU()(shared3(out1 + concat_yxy + out1)),
         shared2(concat_yxy / out1),
         shared2(out1 - concat_xyx),
         shared3(concat_yxy * out1 * concat_yxy),

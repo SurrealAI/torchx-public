@@ -2,7 +2,7 @@ import torch
 from .base import Layer
 
 
-class Dense(Layer):
+class Linear(Layer):
     def __init__(self, out_features, bias=True):
         super().__init__()
         self.out_features = out_features
@@ -29,8 +29,8 @@ class Dense(Layer):
         )
 
 
-class Linear(Dense):
-    "alias"
+class Dense(Linear):
+    "Alias for Linear"
     pass
 
 

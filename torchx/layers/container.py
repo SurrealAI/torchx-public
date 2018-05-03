@@ -43,17 +43,21 @@ class Lambda(Layer):
         """
         assert issubclass(cls, nn.Module)
 
-        class _Wrapped(Lambda):
-            def __init__(self, *args, **kwargs):
-                super().__init__(
-                    function=cls(*args, **kwargs),
-                    get_output_shape=None,
-                )
+        def _wrapped__init__(self, *args, **kwargs):
+            Lambda.__init__(
+                self,
+                function=cls(*args, **kwargs),
+                get_output_shape=None,
+            )
 
         if not cls_name:
             cls_name = cls.__name__
-        _Wrapped.__name__ = cls_name
-        return _Wrapped
+            
+        return type(  # subclasses are properly registered in LayerMeta
+            cls_name,
+            (Lambda,),
+            {'__init__': _wrapped__init__}
+        )
 
 
 class Sequential(Layer):
