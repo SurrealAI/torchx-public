@@ -95,25 +95,6 @@ class Layer(Module, metaclass=_LayerMeta):
                 )
         return self
 
-    def _handle_placeholder(self, input_pstruct, output_shape, node_index):
-        """
-        Can be overriden by subclasses
-
-        Args:
-          input_pstruct: PlaceholderStruct
-          output_shape: computed as self.get_output_shape(self.input_shape)
-          node_index: https://keras.io/getting-started/functional-api-guide/#the-concept-of-layer-node
-
-        Returns:
-          PlaceholderStruct
-        """
-        # print('DEBUG INSIDE HANDLE', self.__class__.__name__, placeholders, input_shape)
-        return PlaceholderStruct.from_shape(
-            output_shape,
-            inbound_layer=self,
-            node_index=node_index
-        )
-
     def _pack_call_args(self, args, kwargs):
         """
         Handle variable positional and keyword args.
@@ -154,9 +135,9 @@ class Layer(Module, metaclass=_LayerMeta):
         self.input_placeholder_nodes.append(pstruct)
         self.build(pstruct.get_shape())  # will only build once
         output_shape = self.get_output_shape(self.input_shape)
-        output = self._handle_placeholder(
-            pstruct,
-            output_shape=output_shape,
+        output = PlaceholderStruct.from_shape(
+            output_shape,
+            inbound_layer=self,
             node_index=len(self.input_placeholder_nodes) - 1
         )
         assert isinstance(output, PlaceholderStruct)
