@@ -130,13 +130,9 @@ def th_to_scalar(x):
     To python native int/float type
     """
     if torch.is_tensor(x):
-        assert x.numel() == 1, \
-            'tensor must have only 1 element to convert to scalar'
-        x = x.view(-1)[0]
-        if x.dtype in [torch.float16, torch.float32, torch.float64]:
-            return float(x)
-        else:
-            return int(x)
+        # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.item
+        # x = x.view(-1)[0]
+        return x.item()
     elif U.is_np_array(x) or U.is_np_scalar(x):
         return np.asscalar(x)
     elif isinstance(x, (list, tuple)):
