@@ -43,21 +43,18 @@ def test_merge_layers():
     z = fill_tensor(shape, 11)
 
     for MergeCls in [Add, Multiply, Average, Maximum]:
-        input_shape = [shape] * 3
         check_inferred_shape(
-            MergeCls(input_shape=input_shape), [x, y, z], MergeCls.__name__
+            MergeCls(), [x, y, z], MergeCls.__name__
         )
 
     # ---------------- Subtract -----------------
-    input_shape = [shape] * 2
     check_inferred_shape(
-        Subtract(input_shape=input_shape), [x, y], 'Subtract'
+        Subtract(), [x, y], 'Subtract'
     )
 
     # ---------------- Concat -----------------
     for axis in [0, 1, 2, -2, -1]:
-        input_shape = [shape] * 3
-        concat = Concat(input_shape=input_shape, axis=axis)
+        concat = Concat(axis=axis)
         xs = x, y, z
         out = concat(*xs)  # also test *varargs
         assert nnx.th_to_scalar(out.mean()) == 7.
@@ -80,7 +77,6 @@ def test_placeholder_overload():
 
     # should be add, multiply, subtract
     print(model.postorder_traverse())
-    model.compile()
     outv = model(xv, yv)
     assert isinstance(outv, list)
     assert torch.equal(outv[0], fill_tensor(xshape, -7))
@@ -132,24 +128,9 @@ def test_single_node(input_case_id, output_case_id):
     "single node computation graph"
     inputs, outputs = single_node_testcases(input_case_id, output_case_id)
     model = Functional(inputs=inputs, outputs=outputs)
-    model.compile()
     input_tensors = randn_pstruct(inputs)
     check_inferred_shape(model, input_tensors,
                          'inputs={} outputs={}'.format(inputs, outputs))
-
-
-def test_temp():
-    x_shape = (12, 31)
-    y_shape = (12, 41)
-
-    x = Placeholder(x_shape)
-    y = Placeholder(y_shape)
-    w1 = concat(Dense(22)(x), Dense(44)(y))
-    assert w1.shape == (12, 66)
-    model = Functional(inputs=[w1], outputs=w1*w1)
-    model.compile()
-    outv = model([new_tensor((12, 66))])
-    print(outv)
 
 
 def multi_node_testcases(input_case_id, output_case_id):
@@ -211,7 +192,6 @@ def multi_node_testcases(input_case_id, output_case_id):
 def test_multi_node(input_case_id, output_case_id):
     inputs, outputs = multi_node_testcases(input_case_id, output_case_id)
     model = Functional(inputs=inputs, outputs=outputs)
-    model.compile()
     input_tensors = randn_pstruct(inputs)
     check_inferred_shape(model, input_tensors,
                          'inputs={} outputs={}'.format(inputs, outputs))

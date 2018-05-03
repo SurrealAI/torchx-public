@@ -8,8 +8,7 @@ class BatchNormNd(Layer):
                  eps=1e-5,
                  momentum=0.1,
                  affine=True,
-                 track_running_stats=True,
-                 *, input_shape=None):
+                 track_running_stats=True):
 
         """
         http://pytorch.org/docs/stable/nn.html#batchnorm1d
@@ -20,10 +19,9 @@ class BatchNormNd(Layer):
             momentum: nn.BatchNorm parameter
             affine: nn.BatchNorm parameter
             track_running_stats: nn.BatchNorm parameter
-            input_shape: see torchx.Layer
         """
-        super().__init__(
-            input_shape=input_shape,
+        super().__init__()
+        self.norm_kwargs = dict(
             eps=eps,
             momentum=momentum,
             affine=affine,
@@ -38,7 +36,7 @@ class BatchNormNd(Layer):
         C from [N, C, ...] input shape        
         """
         channel = input_shape[1]
-        self.batch_norm = self.NormClass(channel, **self.init_kwargs)
+        self.batch_norm = self.NormClass(channel, **self.norm_kwargs)
 
     def forward(self, x):
         return self.batch_norm(x)
@@ -67,8 +65,7 @@ class InstanceNormNd(Layer):
                  eps=1e-5,
                  momentum=0.1,
                  affine=False,
-                 track_running_stats=False,
-                 *, input_shape=None):
+                 track_running_stats=False):
 
         """
         http://pytorch.org/docs/stable/nn.html#instancenorm1d
@@ -79,14 +76,13 @@ class InstanceNormNd(Layer):
             momentum: nn.InstanceNorm parameter
             affine: nn.InstanceNorm parameter
             track_running_stats: nn.InstanceNorm parameter
-            input_shape: see torchx.Layer
 
         Warnings:
             the default args `affine=False` and `track_running_stats=False`
             are different from BatchNorm
         """
-        super().__init__(
-            input_shape=input_shape,
+        super().__init__()
+        self.norm_kwargs = dict(
             eps=eps,
             momentum=momentum,
             affine=affine,
@@ -101,7 +97,7 @@ class InstanceNormNd(Layer):
         C from [N, C, ...] input shape
         """
         channel = input_shape[1]
-        self.instance_norm = self.NormClass(channel, **self.init_kwargs)
+        self.instance_norm = self.NormClass(channel, **self.norm_kwargs)
 
     def forward(self, x):
         return self.instance_norm(x)
@@ -128,8 +124,7 @@ class InstanceNorm3d(InstanceNormNd):
 class LayerNorm(Layer):
     def __init__(self, num_normalize_dim,
                  eps=1e-5,
-                 elementwise_affine=True,
-                 *, input_shape=None):
+                 elementwise_affine=True):
         """
         http://pytorch.org/docs/stable/nn.html#layernorm
 
@@ -143,10 +138,9 @@ class LayerNorm(Layer):
             - num_dim=3: normalize over [C, H, W], gamma and beta shape [10, 20, 30]
           eps: nn.LayerNorm parameter
           elementwise_affine: nn.LayerNorm parameter
-          input_shape: see torchx.Layer
         """
-        super().__init__(
-            input_shape=input_shape,
+        super().__init__()
+        self.norm_kwargs = dict(
             eps=eps,
             elementwise_affine=elementwise_affine
         )
@@ -163,7 +157,7 @@ class LayerNorm(Layer):
         assert self.num_normalize_dim <= len(input_shape) - 1, \
             'num_normalize_dim must be at most input dim - 1'
         normalized_shape = input_shape[-self.num_normalize_dim:]
-        self.layer_norm = nn.LayerNorm(normalized_shape, **self.init_kwargs)
+        self.layer_norm = nn.LayerNorm(normalized_shape, **self.norm_kwargs)
 
     def forward(self, x):
         return self.layer_norm(x)
@@ -175,18 +169,16 @@ class LayerNorm(Layer):
 class GroupNorm(Layer):
     def __init__(self, num_groups,
                  eps=1e-5,
-                 affine=True,
-                 *, input_shape=None):
+                 affine=True):
         """
         Args:
           num_groups: equivalent to LayerNorm if num_groups == 1
             equivalent to InstanceNorm if num_groups == num_channels
           eps: nn.GroupNorm parameter
           elementwise_affine: nn.GroupNorm parameter
-          input_shape: see torchx.Layer
         """
-        super().__init__(
-            input_shape=input_shape,
+        super().__init__()
+        self.norm_kwargs = dict(
             eps=eps,
             affine=affine
         )
@@ -201,7 +193,7 @@ class GroupNorm(Layer):
             'number of groups {} must divide number of channels {}'.format(
                 self.num_groups, channel)
         self.group_norm = nn.GroupNorm(
-            self.num_groups, channel, **self.init_kwargs)
+            self.num_groups, channel, **self.norm_kwargs)
 
     def forward(self, x):
         return self.group_norm(x)

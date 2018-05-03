@@ -21,15 +21,15 @@ class MergeLayer(Layer):
 
 
 class Concat(MergeLayer):
-    def __init__(self, axis=-1, *, input_shape=None, **kwargs):
+    def __init__(self, axis=-1, **kwargs):
         """
         Args:
           axis: if 0, concat over batch dim will not affect output shape because
             `input_shape` does not include batch dim
           input_shape: must be a multi shape (i.e. list of simple shapes)
         """
+        super().__init__(**kwargs)
         self.axis = axis
-        super().__init__(input_shape=input_shape, **kwargs)
 
     def forward(self, x_list):
         return torch.cat(x_list, self.axis)

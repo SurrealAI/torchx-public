@@ -3,14 +3,15 @@ from .base import Layer
 
 
 class Dense(Layer):
-    def __init__(self, out_features, *, input_shape=None, bias=True):
-        super().__init__(input_shape=input_shape, bias=bias)
+    def __init__(self, out_features, bias=True):
+        super().__init__()
         self.out_features = out_features
+        self.has_bias = bias
 
     def _build(self, input_shape):
         in_features = input_shape[-1]
-        self.fc = torch.nn.Linear(in_features, self.out_features,
-                                  **self.init_kwargs)
+        self.fc = torch.nn.Linear(
+            in_features, self.out_features, bias=self.has_bias)
 
     def forward(self, x):
         return self.fc(x)

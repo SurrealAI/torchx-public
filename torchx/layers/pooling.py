@@ -4,18 +4,18 @@ from .base import Layer
 
 
 class MaxPoolNd(Layer):
-    def __init__(self, dim, kernel_size,
-                 *, input_shape=None, **kwargs):
-        super().__init__(input_shape=input_shape, **kwargs)
+    def __init__(self, dim, kernel_size, **kwargs):
+        super().__init__()
         self.kernel_size = kernel_size
         assert 1 <= dim <= 3
         self.dim = dim
+        self.pool_kwargs = kwargs
         self.PoolClass = [nn.MaxPool1d, nn.MaxPool2d, nn.MaxPool3d][dim - 1]
 
     def _build(self, input_shape):
         self.pool = self.PoolClass(
             self.kernel_size,
-            **self.init_kwargs
+            **self.pool_kwargs
         )
 
     def forward(self, x):
@@ -27,7 +27,7 @@ class MaxPoolNd(Layer):
             input_shape,
             kernel_size=self.kernel_size,
             has_batch=True,
-            **self.init_kwargs
+            **self.pool_kwargs
         )
 
 
@@ -47,9 +47,8 @@ class MaxPool3d(MaxPoolNd):
 
 
 class AvgPoolNd(MaxPoolNd):
-    def __init__(self, dim, kernel_size,
-                 *, input_shape=None, **kwargs):
-        super().__init__(dim, kernel_size, input_shape=input_shape, **kwargs)
+    def __init__(self, dim, kernel_size, **kwargs):
+        super().__init__(dim, kernel_size, **kwargs)
         self.PoolClass = [nn.AvgPool1d, nn.AvgPool2d, nn.AvgPool3d][dim - 1]
 
     def get_output_shape(self, input_shape):
@@ -59,7 +58,7 @@ class AvgPoolNd(MaxPoolNd):
             kernel_size=self.kernel_size,
             dilation=1,  # difference between MaxPool and AvgPool
             has_batch=True,
-            **self.init_kwargs
+            **self.pool_kwargs
         )
 
 

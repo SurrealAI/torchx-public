@@ -10,8 +10,7 @@ import torchx.utils as U
 class RNNBase(Layer):
     def __init__(self, rnn_class,
                  rnn_state_arity,
-                 hidden_size,
-                 *, input_shape=None,
+                 hidden_size, *,
                  return_sequences=False,
                  return_state=False,
                  bidirectional=False,
@@ -25,7 +24,6 @@ class RNNBase(Layer):
           rnn_state_arity:
             1 for SimpleRNN and GRU (just "H")
             2 for LSTM ("H" and "C")
-          input_shape: [batch_size, sequence_length, feature]
           return_sequences: same as Keras API
           return_state: same as Keras API
               https://keras.io/layers/recurrent/#rnn
@@ -50,7 +48,7 @@ class RNNBase(Layer):
           return_state=False AND return_sequences=False
             single tensor, (10, 90)
         """
-        super().__init__(input_shape=input_shape, **kwargs)
+        super().__init__()
         self.RNNClass = rnn_class
         self.rnn_state_arity = rnn_state_arity
         self.hidden_size = hidden_size
@@ -59,6 +57,7 @@ class RNNBase(Layer):
         assert 'batch_first' not in kwargs, 'batch_first is always set to True'
         self.return_sequences = return_sequences
         self.return_state = return_state
+        self.rnn_kwargs = kwargs
 
     def _build(self, input_shape):
         assert len(input_shape) == 3
@@ -69,7 +68,7 @@ class RNNBase(Layer):
             num_layers=self.num_layers,
             bidirectional=self.bidirectional,
             batch_first=True,
-            **self.init_kwargs
+            **self.rnn_kwargs
         )
 
     def forward(self, x):
@@ -151,9 +150,6 @@ class GetRNNOutput(Layer):
         If you set return_state=True, LSTM will return (output, state_h, state_c)
         GetRNNOutput ensures that you always receive the output tensor only
     """
-    def __init__(self, *, input_shape=None):
-        super().__init__(input_shape=input_shape)
-
     def _build(self, input_shape):
         pass
 
@@ -182,8 +178,7 @@ class GetRNNState(Layer):
     """
     MODES = ['h', 'c', 'concat']
 
-    def __init__(self, mode='concat',
-                 *, input_shape=None):
+    def __init__(self, mode='concat'):
         """
         Args:
           mode: state process mode
@@ -192,7 +187,7 @@ class GetRNNState(Layer):
           - "concat": concat h and c along the last feature dimension.
             if not LSTM, simply return h
         """
-        super().__init__(input_shape=input_shape)
+        super().__init__()
         self.mode = mode.lower()
         assert self.mode in self.MODES, ('valid modes are', self.MODES)
 

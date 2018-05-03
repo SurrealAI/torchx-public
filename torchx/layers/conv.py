@@ -4,13 +4,13 @@ from .base import Layer
 
 
 class ConvNd(Layer):
-    def __init__(self, dim, out_channels, kernel_size,
-                 *, input_shape=None, **kwargs):
-        super().__init__(input_shape=input_shape, **kwargs)
+    def __init__(self, dim, out_channels, kernel_size, **kwargs):
+        super().__init__()
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         assert 1 <= dim <= 3
         self.dim = dim
+        self.conv_kwargs = kwargs
         self.ConvClass = [nn.Conv1d, nn.Conv2d, nn.Conv3d][dim - 1]
 
     def _build(self, input_shape):
@@ -19,7 +19,7 @@ class ConvNd(Layer):
             in_channels,
             self.out_channels,
             kernel_size=self.kernel_size,
-            **self.init_kwargs
+            **self.conv_kwargs
         )
 
     def forward(self, x):
@@ -32,7 +32,7 @@ class ConvNd(Layer):
             out_channels=self.out_channels,
             kernel_size=self.kernel_size,
             has_batch=True,
-            **self.init_kwargs
+            **self.conv_kwargs
         )
 
 
@@ -52,13 +52,13 @@ class Conv3d(ConvNd):
 
 
 class ConvTransposeNd(Layer):
-    def __init__(self, dim, out_channels, kernel_size,
-                 *, input_shape=None, **kwargs):
-        super().__init__(input_shape=input_shape, **kwargs)
+    def __init__(self, dim, out_channels, kernel_size, **kwargs):
+        super().__init__()
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         assert 1 <= dim <= 3
         self.dim = dim
+        self.conv_kwargs = kwargs
         self.ConvTransposeClass = \
             [nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d][dim - 1]
 
@@ -68,7 +68,7 @@ class ConvTransposeNd(Layer):
             in_channels,
             self.out_channels,
             kernel_size=self.kernel_size,
-            **self.init_kwargs
+            **self.conv_kwargs
         )
 
     def forward(self, x):
@@ -81,7 +81,7 @@ class ConvTransposeNd(Layer):
             out_channels=self.out_channels,
             kernel_size=self.kernel_size,
             has_batch=True,
-            **self.init_kwargs
+            **self.conv_kwargs
         )
 
 

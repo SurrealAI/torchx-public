@@ -9,7 +9,7 @@ class Lambda(Layer):
     """
     Call wrap_same_shape_class(cls) to wrap a pytorch builtin module into Lambda
     """
-    def __init__(self, function, get_output_shape=None, *, input_shape=None):
+    def __init__(self, function, get_output_shape=None):
         """
         Lambda layer must not have learnable parameters.
 
@@ -18,10 +18,8 @@ class Lambda(Layer):
             get_output_shape: a function that takes input shape and
                 returns output shape
                 if None, return the same output shape as input
-            input_shape: specify keyword input_shape if this layer is used as
-                the first layer
         """
-        super().__init__(input_shape=input_shape)
+        super().__init__()
         assert callable(function)
         self._lambda_forward = function
         if get_output_shape is None:  # same shape adapter
@@ -46,11 +44,10 @@ class Lambda(Layer):
         assert issubclass(cls, nn.Module)
 
         class _Wrapped(Lambda):
-            def __init__(self, *args, input_shape=None, **kwargs):
+            def __init__(self, *args, **kwargs):
                 super().__init__(
                     function=cls(*args, **kwargs),
                     get_output_shape=None,
-                    input_shape=input_shape
                 )
 
         if not cls_name:
@@ -60,16 +57,12 @@ class Lambda(Layer):
 
 
 class Sequential(Layer):
-    def __init__(self, layer_list, *, input_shape=None):
+    def __init__(self, layer_list):
         """
-        If input_shape is None, will inherit the input_shape from the
-        first layer in `layer_list`
         """
+        super().__init__()
         assert len(layer_list) >= 1
         self.layer_list = list(map(self._wrap_same_shape, layer_list))
-        if input_shape is None:
-            input_shape = self.layer_list[0].input_shape
-        super().__init__(input_shape=input_shape)
         # ModuleList must be created after init, otherwise PyTorch error
         self.module_list = nn.ModuleList()
 
@@ -96,7 +89,6 @@ class Sequential(Layer):
         for layer in layers:
             layer = self._wrap_same_shape(layer)
             if self.is_built:
-                assert self.input_shape is not None, 'internal error'
                 self._add_after_build(layer)
                 self.module_list.append(layer)
             self.layer_list.append(layer)
@@ -129,9 +121,6 @@ class TimeDistributed(Sequential):
     Similar to Keras API
     https://keras.io/layers/wrappers/
     """
-    def __init__(self, layer_list, *, input_shape=None):
-        super().__init__(layer_list, input_shape=input_shape)
-
     def _collapsed_shape(self, shape):
         """
         Collapse the first 2 dims: batch_size and seq_len dim
@@ -177,7 +166,7 @@ class Functional(Layer):
         If input_shape is None, will inherit the input_shape from the
         first layer in `layer_list`
         """
-        super().__init__(input_shape=None)
+        super().__init__()
         # ModuleList must be created after init, otherwise PyTorch error
         self.module_list = nn.ModuleList()
         self.inputs = PlaceholderStruct(inputs)
@@ -242,18 +231,18 @@ class Functional(Layer):
             output_node.bind_tensors(output_tensors)
         return self.outputs.to_tensors()
 
-    def compile(self):
-        """
-        """
-        self.build(self.inputs.get_shape())
-        return self
+    # def compile(self):
+    #     """
+    #     """
+    #     self.build(self.inputs.get_shape())
+    #     return self
 
     def _build(self, input_shape):
+        # layers are already built at placeholder call time
         for layer, node_index in self.postorder_traverse():
             if node_index == 0:
-                layer.build()
                 self.module_list.append(layer)
-        print('DEBUG all modules', self.module_list)
+        # print('DEBUG all modules', self.module_list)
 
     def get_output_shape(self, input_shape):
         return self.outputs.get_shape()

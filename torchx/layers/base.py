@@ -50,15 +50,9 @@ class Layer(Module, metaclass=_LayerMeta):
         get_output_shape(input_shape)
         forward(*args, **kwargs): the regular PyTorch nn.Module.forward()
     """
-    def __init__(self, *, input_shape=None, **kwargs):
-        """
-        Args:
-            input_shape: None if this is not the first layer. See
-        """
+    def __init__(self):
         super().__init__()
-        self.input_shape = input_shape
-        self.init_kwargs = kwargs
-        self.is_built = False
+        self.input_shape = None
         # https://keras.io/getting-started/functional-api-guide/#the-concept-of-layer-node
         self.input_placeholder_nodes = []
         self.output_placeholder_nodes = []
@@ -73,30 +67,33 @@ class Layer(Module, metaclass=_LayerMeta):
     def get_output_shape(self, input_shape):
         raise NotImplementedError
 
-    def build(self, input_shape=None):
+    @property
+    def is_built(self):
+        return self.input_shape is not None
+
+    def build(self, input_shape):
         """
-        Only the first call has effect. Subsequent calls are no-ops
-        Please override _build() abstract method
+        This method is not supposed to be overriden. Please override _build() instead.
+        Only the first call to build() is effective. Subsequent calls will be no-ops.
+
+        Returns:
+            self
         """
-        # print('DEBUG BUILD', self.__class__.__name__, input_shape, '->', self.out_features if hasattr(self, 'out_features') else '')
-        if self.is_built:
-            assert self.input_shape is not None, \
-                'internal error, self.input_shape should have been set after build'
-            return
-        if self.input_shape is not None:
-            # TODO extend is_valid_shape
-            assert U.is_valid_shape(self.input_shape)
-            if input_shape is not None:
-                assert U.shape_equals(input_shape, self.input_shape,
-                                      ignore_batch_dim=True), \
-                    'self.input_shape has already been set, ' \
-                    'must be the same as `input_shape` arg of build(input_shape)'
-        else:
-            assert U.is_valid_shape(input_shape)
+        # TODO extend is_valid_shape
+        assert U.is_valid_shape(input_shape)
+        if not self.is_built:
             self.input_shape = input_shape
-        self._build(self.input_shape)
-        self.is_built = True
-        assert self.input_shape is not None, 'internal error'
+            self._build(self.input_shape)
+        else:
+            if not U.shape_equals(
+                input_shape, self.input_shape, ignore_batch_dim=True
+            ):
+                raise RuntimeError(
+                    'build() has already been called, subsequent calls will be no-op. '
+                    "However, this call's shape {} does not match input_shape {} "
+                    'at the first build() call.'.format(input_shape, self.input_shape)
+                )
+        return self
 
     def _handle_placeholder(self, input_pstruct, output_shape, node_index):
         """
@@ -155,11 +152,7 @@ class Layer(Module, metaclass=_LayerMeta):
         placeholders = self._pack_call_args(args, kwargs)
         pstruct = PlaceholderStruct(placeholders)
         self.input_placeholder_nodes.append(pstruct)
-        if self.input_shape is None:
-            self.input_shape = pstruct.get_shape()  # for build()
-        else:
-            assert U.shape_equals(self.input_shape, pstruct.get_shape()), \
-                'multiple placeholder calls should have the same input_shape'
+        self.build(pstruct.get_shape())  # will only build once
         output_shape = self.get_output_shape(self.input_shape)
         output = self._handle_placeholder(
             pstruct,
@@ -181,18 +174,10 @@ class Layer(Module, metaclass=_LayerMeta):
         """
         if PlaceholderStruct.exists(args) or PlaceholderStruct.exists(kwargs):
             return self._handle_placeholder_call(*args, **kwargs)
-        if self.input_shape is not None:
-            self.build()
-        else:
-            # TODO enable auto-shape inference and auto build
-            raise RuntimeError(self.__class__.__name__ +
-               ' input_shape not specified and Layer.build() has not been called yet.')
+
         tensors = self._pack_call_args(args, kwargs)  # nested tensors
         tensors_shape = U.get_shape(tensors)
-        assert U.shape_equals(
-            tensors_shape, self.input_shape, ignore_batch_dim=True
-        ), ('actual tensor shape does not match input_shape at build time',
-            tensors_shape, self.input_shape)
+        self.build(tensors_shape)  # will only build once
         return super().__call__(*args, **kwargs)
 
 

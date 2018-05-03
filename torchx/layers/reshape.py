@@ -18,8 +18,8 @@ class Flatten(Layer):
 
 
 class View(Layer):
-    def __init__(self, *args, input_shape=None, **kwargs):
-        super().__init__(input_shape=input_shape, **kwargs)
+    def __init__(self, *args):
+        super().__init__()
         self._view_args = args
 
     def _build(self, input_shape):
@@ -33,8 +33,8 @@ class View(Layer):
 
 
 class Slice(Layer):
-    def __init__(self, slice, *, input_shape=None, **kwargs):
-        super().__init__(input_shape=input_shape, **kwargs)
+    def __init__(self, slice):
+        super().__init__()
         self._slice = slice
 
     def _build(self, input_shape):

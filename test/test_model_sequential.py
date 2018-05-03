@@ -28,7 +28,7 @@ def test_dense_sequential():
     x = new_tensor(input_shape)
 
     model = Sequential([
-        Dense(93, input_shape=input_shape),
+        Dense(93),
         nn.ReLU(),
         Dense(42),
         nn.LeakyReLU(0.1),
@@ -43,7 +43,6 @@ def test_conv_sequential():
 
     model = Sequential([
         Conv2d(21,
-               input_shape=input_shape,
                kernel_size=(5, 3),
                padding=(14, 16)),
         nn.ReLU(),
@@ -93,7 +92,7 @@ def test_rnn_without_state():
                   return_sequences=True),
         nn.ReLU(),
         GetRNNOutput(),  # essentially no-op
-    ], input_shape=input_shape)
+    ])
     check_inferred_shape('SimpleRNN, seq=True', locals())
 
     model = Sequential([
@@ -102,12 +101,11 @@ def test_rnn_without_state():
             num_layers=2,
             bidirectional=True),
         nn.ReLU(),
-    ], input_shape=input_shape)
+    ])
     check_inferred_shape('GRU, seq=False', locals())
 
     model = Sequential([
         LSTM(23,
-             input_shape=input_shape,
              return_sequences=True,
              num_layers=3,
              bidirectional=True),
@@ -122,7 +120,6 @@ def test_rnn_with_state():
 
     model = Sequential([
         SimpleRNN(23,
-                  input_shape=input_shape,
                   return_sequences=True,
                   return_state=True),
     ])
@@ -133,7 +130,6 @@ def test_rnn_with_state():
 
     model = Sequential([
         GRU(23,
-            input_shape=input_shape,
             return_sequences=False,
             return_state=True,
             num_layers=4,
@@ -148,7 +144,6 @@ def test_rnn_with_state():
 
     model = Sequential([
         GRU(23,
-            input_shape=input_shape,
             return_sequences=True,
             return_state=True,
             num_layers=4,
@@ -160,7 +155,6 @@ def test_rnn_with_state():
 
     model = Sequential([
         LSTM(23,
-             input_shape=input_shape,
              return_sequences=True,
              return_state=True,
              num_layers=3,
@@ -175,7 +169,6 @@ def test_rnn_with_state():
 
     model = Sequential([
         LSTM(23,
-             input_shape=input_shape,
              return_sequences=False,
              return_state=True,
              num_layers=1,
@@ -204,7 +197,7 @@ def test_time_distributed():
                stride=(2, 1),
                padding=10),
         nn.LeakyReLU(0.3),
-    ], input_shape=input_shape)
+    ])
 
     check_inferred_shape('TimeDistributed conv', locals())
 
