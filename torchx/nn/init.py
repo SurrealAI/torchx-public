@@ -80,6 +80,7 @@ def th_initializer(spec):
     """
     all_initers = th_all_initializer_dict()
     if isinstance(spec, str):
+        spec = spec.strip('_')
         assert spec in all_initers, \
             ('valid initializers are:', th_all_initializer_names())
         return all_initers[spec]
