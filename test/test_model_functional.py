@@ -1,45 +1,69 @@
 from test.utils import *
 
 
-def check_inferred_shape(msg, local_dict):
-    model = local_dict['model']
-    x = local_dict['xs']
-    input_shape = local_dict['input_shape']
+def check_inferred_shape(model, xs, msg):
+    input_shape = U.get_shape(xs)
+    z = model(xs)  # actual forward prop
+    actual_shape = U.get_shape(z)
     inferred_shape = model.get_output_shape(input_shape)
-
-    x = model(x)  # actual forward prop
-    actual_shape = U.get_shape(x)
     print(msg, inferred_shape)
+
+    # backward on all output tensors
+    if isinstance(z, (list, tuple)):
+        # output list, backward on every list item
+        for z_, shape_ in zip(z, actual_shape):
+            z_.backward(torch.randn(shape_), retain_graph=True)
+    elif isinstance(z, dict):
+        # output dict, backward on every dict entry
+        for key in z:
+            z_, shape_ = z[key], actual_shape[key]
+            z_.backward(torch.randn(shape_), retain_graph=True)
+    else:
+        z.backward(torch.randn(actual_shape))
+
+    # check all input tensors should have gradient
+    if isinstance(xs, (list, tuple)):
+        pass
+    elif isinstance(xs, dict):
+        xs = xs.values()
+    else:
+        xs = [xs]
+
+    for x in xs:
+        assert x.grad is not None, 'backprop does not reach the input tensor'
+        x.grad = None  # clear grad for the next round of testing
     assert U.shape_equals(inferred_shape, actual_shape), \
         ('inferred', inferred_shape, 'actual', actual_shape)
 
 
 def test_merge_layers():
     shape = (12, 37, 9)
-    x = new_variable(shape, 2)
-    y = new_variable(shape, 8)
-    z = new_variable(shape, 11)
+    x = fill_tensor(shape, 2)
+    y = fill_tensor(shape, 8)
+    z = fill_tensor(shape, 11)
 
     for MergeCls in [Add, Multiply, Average, Maximum]:
         input_shape = [shape] * 3
-        model = MergeCls(input_shape=input_shape)
-        xs = x, y, z
-        check_inferred_shape(MergeCls.__name__, locals())
+        check_inferred_shape(
+            MergeCls(input_shape=input_shape), [x, y, z], MergeCls.__name__
+        )
 
     # ---------------- Subtract -----------------
     input_shape = [shape] * 2
-    model = Subtract(input_shape=input_shape)
-    xs = x, y
-    check_inferred_shape('Subtract', locals())
+    check_inferred_shape(
+        Subtract(input_shape=input_shape), [x, y], 'Subtract'
+    )
 
     # ---------------- Concat -----------------
     for axis in [0, 1, 2, -2, -1]:
         input_shape = [shape] * 3
-        model = Concat(input_shape=input_shape, axis=axis)
+        concat = Concat(input_shape=input_shape, axis=axis)
         xs = x, y, z
-        out = model(x, y, z)  # also test *varargs
-        print('Concat axis=', axis, ':', out.size(), out.mean())
-        check_inferred_shape('Concat', locals())
+        out = concat(*xs)  # also test *varargs
+        assert nnx.th_to_scalar(out.mean()) == 7.
+        check_inferred_shape(
+            concat, [x, y, z], 'Concat'
+        )
 
 
 def test_placeholder_overload():
@@ -49,79 +73,147 @@ def test_placeholder_overload():
     y = Placeholder(yshape)
     # tries indexing using integer and slice
     out = x + y[2:, 2:] - x * y[:-2, :-2]
-    # out = x + y - x * y
-    myfunc = Functional(inputs=[x, y], outputs=[out])
-    # out = x + y - x * y
+    model = Functional(inputs=[x, y], outputs=[out])
 
-    xv = new_variable(xshape, 3)
-    yv = new_variable(yshape, 5)
+    xv = fill_tensor(xshape, 3)
+    yv = fill_tensor(yshape, 5)
 
     # should be add, multiply, subtract
-    print(myfunc.postorder_traverse())
-    myfunc.compile()
-    outv = myfunc([xv, yv])
-    print(outv)
-    assert torch.equal(outv[0], new_variable(xshape, -7))
+    print(model.postorder_traverse())
+    model.compile()
+    outv = model(xv, yv)
+    assert isinstance(outv, list)
+    assert torch.equal(outv[0], fill_tensor(xshape, -7))
+    check_inferred_shape(model, [xv, yv], 'placeholder overload')
 
 
-def test_simple_functional():
+def single_node_testcases(input_case_id, output_case_id):
+    """
+    provide cartesian-product test cases for test_single_node
+    """
     x_shape = (12, 31)
     y_shape = (12, 41)
 
     x = Placeholder(x_shape)
     y = Placeholder(y_shape)
-    w = concat(Dense(22)(x), Dense(44)(y))
-    w = concat(Dense(33)(x), Dense(55)(w))
-    w = concat(Dense(11)(x), Dense(66)(w))
-    w = concat(Dense(7)(y), Dense(17)(w))
-    out = multiply(subtract(w, Dense(7+17)(w)), Dense(7+17)(concat(x, y)))
+    w1 = concat(Dense(22)(x), Dense(44)(y))
+    assert w1.shape == (12, 66)
+    w2 = concat(Dense(33)(w1), Dense(55)(w1[:, :33] / w1[:, 33:]))
+    assert w2.shape == (12, 88)
+    w3 = concat(Dense(11)(w2), Dense(66)(w2[:, 10:40] / w2[:, 20:50]))
+    assert w3.shape == (12, 77)
+    w4 = concat(Dense(7)(w3 * w3), Dense(17)(w3))
+    assert w4.shape == (12, 24)
+    out1 = multiply(subtract(w4, Dense(7+17)(w3)), Dense(7+17)(concat(w4, w3, w4)))
+    assert out1.shape == (12, 24)
+    out2 = maximum(w4, w4 * w4, Dense(7+17)(w3), Dense(7+17)(concat(w3, w4)))
+    assert out2.shape == (12, 24)
 
-    myfunc = Functional(inputs=[x, y], outputs=[out, out])
+    input_test_cases = [
+        [x, y],
+        w1,
+        [w2],
+        {'myx': x, 'myy': y},
+        {'myw3': w3}
+    ]
+    output_test_cases = [
+        out1,
+        [out2],
+        [w3, w3 + w3, w3 * w3, w3, minimum(w3, w3)],
+        {'myout1': out1},
+        {'myout2': out2, 'myout1': out1, 'myout2_again': out2},
+    ]
+    return input_test_cases[input_case_id], output_test_cases[output_case_id]
 
-    xv = new_variable(x_shape)
-    yv = new_variable(y_shape)
 
-    print(myfunc.postorder_traverse())
-    myfunc.compile()
-    outv = myfunc([xv, yv])
-    print(U.get_shape(outv))
+@pytest.mark.parametrize('output_case_id', range(5))
+@pytest.mark.parametrize('input_case_id', range(5))
+def test_single_node(input_case_id, output_case_id):
+    "single node computation graph"
+    inputs, outputs = single_node_testcases(input_case_id, output_case_id)
+    model = Functional(inputs=inputs, outputs=outputs)
+    model.compile()
+    input_tensors = randn_pstruct(inputs)
+    check_inferred_shape(model, input_tensors,
+                         'inputs={} outputs={}'.format(inputs, outputs))
 
-    # myfunc = MyFunc()
-    # out = myfunc(xp, yp)
-    # print(out.shape)
-    # outv = myfunc(xv, yv)
-    # print(out.size(), myfunc.get_output_shape([x_shape, y_shape]))
 
-def test_multinode_functional():
+def test_temp():
+    x_shape = (12, 31)
+    y_shape = (12, 41)
+
+    x = Placeholder(x_shape)
+    y = Placeholder(y_shape)
+    w1 = concat(Dense(22)(x), Dense(44)(y))
+    assert w1.shape == (12, 66)
+    model = Functional(inputs=[w1], outputs=w1*w1)
+    model.compile()
+    outv = model([new_tensor((12, 66))])
+    print(outv)
+
+
+def multi_node_testcases(input_case_id, output_case_id):
+    """
+    provide cartesian-product test cases for test_multi_node
+
+    Set up a complicated computation graph with shared layers
+    """
     x_shape = (12, 31)
     y_shape = (12, 41)
 
     x0 = Placeholder(x_shape)
     y0 = Placeholder(y_shape)
 
-    x = Dense(22)(x0)
-    y = Dense(22)(y0)
-    shared1 = Dense(44)
-    out = concat(shared1(x), shared1(y))
+    x1 = Dense(22)(x0)
+    y1 = Dense(22)(y0)
+    shared1 = Dense(17)
+    out1 = concat(shared1(x1), shared1(y1), shared1(x1))
+    assert out1.shape == (12, 51)
+    concat_xyx = concat(x1, y1, x1)[:, :17*3]
+    assert concat_xyx.shape == (12, 51)
+    concat_yxy = concat(y1, x1, y1)[:, -17*3:]
+    assert concat_yxy.shape == (12, 51)
+    shared2 = Dense(47)
+    shared3 = Dense(47)
+    out2 = average(
+        shared2(concat_xyx),
+        shared2(out1),
+        shared2(concat_xyx),
+        shared3(out1 + concat_yxy + out1),
+        shared2(concat_yxy / out1),
+        shared2(out1 - concat_xyx),
+        shared3(concat_yxy * out1 * concat_yxy),
+        shared3(out1),
+    )
+    assert out2.shape == (12, 47)
 
-    myfunc = Functional(inputs={'xvar': x, 'yvar': y}, outputs=out)
-    myfunc0 = Functional(inputs={'xvar': x0, 'yvar': y0}, outputs={'myout': out})
+    input_test_cases = [
+        [x0, y0],
+        [x1, y0],
+        [x0, y1],
+        [y1, x1],
+        {'myx': x0, 'myy': y0},
+        {'myx': x1, 'myy': y1},
+    ]
+    output_test_cases = [
+        out2,
+        [out2, out1],
+        [out1, out1, out2, out2],
+        {'myout1': out1},
+        {'myout2': out2, 'myout1': out1, 'myout2_again': out2},
+        {'yxy': concat_yxy, 'xyx': concat_xyx},
+    ]
+    return input_test_cases[input_case_id], output_test_cases[output_case_id]
 
-    x0v = new_variable(x_shape)
-    y0v = new_variable(y_shape)
 
-    xv = new_variable((30, 22))
-    yv = new_variable((30, 22))
+@pytest.mark.parametrize('output_case_id', range(6))
+@pytest.mark.parametrize('input_case_id', range(6))
+def test_multi_node(input_case_id, output_case_id):
+    inputs, outputs = multi_node_testcases(input_case_id, output_case_id)
+    model = Functional(inputs=inputs, outputs=outputs)
+    model.compile()
+    input_tensors = randn_pstruct(inputs)
+    check_inferred_shape(model, input_tensors,
+                         'inputs={} outputs={}'.format(inputs, outputs))
 
-    print(myfunc0.postorder_traverse())
-    myfunc0.compile()
-    outv = myfunc0(xvar=x0v, yvar=y0v)
-    print(U.get_shape(outv))
-
-    print(myfunc.postorder_traverse())
-    myfunc.compile()
-    outv = myfunc(xvar=xv, yvar=yv)
-    print(U.get_shape(outv))
-
-
-run_all_tests(globals())
+# run_all_tests(globals())

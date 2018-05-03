@@ -23,10 +23,6 @@ def check_inferred_shape(msg, local_dict):
         ('inferred', inferred_shape, 'actual', actual_shape)
 
 
-def new_tensor(input_shape):
-    return torch.randn(input_shape, requires_grad=True)
-
-
 def test_dense_sequential():
     input_shape = (12, 37)
     x = new_tensor(input_shape)

@@ -100,6 +100,14 @@ class Maximum(ElementwiseMerge):
         return output
 
 
+class Minimum(ElementwiseMerge):
+    def forward(self, x_list):
+        output = x_list[0]
+        for x in x_list[1:]:
+            output = torch.min(output, x)
+        return output
+
+
 class Average(ElementwiseMerge):
     def forward(self, x_list):
         return sum(x_list) / (1. * len(x_list))
@@ -132,6 +140,11 @@ def divide(x1, x2):
 @U.enable_varargs
 def maximum(x_list):
     return Maximum()(x_list)
+
+
+@U.enable_varargs
+def minimum(x_list):
+    return Minimum()(x_list)
 
 
 @U.enable_varargs

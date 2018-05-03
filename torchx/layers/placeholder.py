@@ -9,9 +9,19 @@ class Placeholder:
     https://keras.io/getting-started/functional-api-guide/
     https://keras.io/getting-started/functional-api-guide/#the-concept-of-layer-node
     """
+    # avoid cyclic import
+    _Merge = None  # torchx.layers.merge
+    _Reshape = None  # torchx.layers.reshape
+
     def __init__(self, shape,
                  inbound_layer=None,
                  node_index=0):
+        if Placeholder._Merge is None:
+            import torchx.layers.merge as _Merge
+            import torchx.layers.reshape as _Reshape
+            Placeholder._Merge = _Merge
+            Placeholder._Reshape = _Reshape
+
         assert U.is_simple_shape(shape)
         self.shape = shape
         self.inbound_layer = inbound_layer
@@ -22,25 +32,26 @@ class Placeholder:
     def __repr__(self):
         return 'P{}'.format(self.shape)
 
-    def __getitem__(self, key):
-        from .reshape import slice
-        return slice(self, key)
+    def view(self, *args):
+        return self._Reshape.view(self, *args)
+
+    def flatten(self):
+        return self._Reshape.flatten(self)
+
+    def __getitem__(self, slice):
+        return self._Reshape.slice(self, slice)
 
     def __add__(self, p2):
-        from .merge import add
-        return add(self, p2)
+        return self._Merge.add(self, p2)
 
     def __sub__(self, p2):
-        from .merge import subtract
-        return subtract(self, p2)
+        return self._Merge.subtract(self, p2)
 
     def __mul__(self, p2):
-        from .merge import multiply
-        return multiply(self, p2)
+        return self._Merge.multiply(self, p2)
 
     def __truediv__(self, p2):
-        from .merge import divide
-        return divide(self, p2)
+        return self._Merge.divide(self, p2)
 
 
 def _is_placeholder(x):

@@ -4,6 +4,17 @@ import torch.nn as nn
 import torchx.utils as U
 
 
+def th_new_full(size, fill_value, *,
+                dtype=None, device=None, requires_grad=False):
+    """
+    Returns:
+        a new tensor filled with value
+    """
+    return torch.empty(0).new_full(
+        size, fill_value, dtype=dtype, device=device, requires_grad=requires_grad
+    )
+
+
 def th_median(t):
     """
     Find median of entire tensor or Variable

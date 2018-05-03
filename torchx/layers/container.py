@@ -232,13 +232,13 @@ class Functional(Layer):
         self.inputs.bind_tensors(input_tensors)
         output_tensors = None
         for layer, node_index in self.postorder_traverse():
-            print('DEBUG forward layer', layer, 'node', node_index)
+            # print('DEBUG forward layer', layer, 'node', node_index)
             input_struct = layer.input_placeholder_nodes[node_index]
             assert input_struct.all_tensor_bound(), \
                 ('placeholder without bound tensor in', layer)
             output_tensors = layer(input_struct.to_tensors())
             output_node = layer.output_placeholder_nodes[node_index]
-            print('DEBUG outpout', output_node, output_tensors.size())
+            # print('DEBUG outpout', output_node, output_tensors.size())
             output_node.bind_tensors(output_tensors)
         return self.outputs.to_tensors()
 

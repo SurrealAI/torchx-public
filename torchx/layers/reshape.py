@@ -1,4 +1,3 @@
-import torch
 import torchx.nn as nnx
 import torchx.utils as U
 from .base import Layer
@@ -21,34 +20,41 @@ class Flatten(Layer):
 class View(Layer):
     def __init__(self, *args, input_shape=None, **kwargs):
         super().__init__(input_shape=input_shape, **kwargs)
-        self.viewargs = args
+        self._view_args = args
 
     def _build(self, input_shape):
         pass
 
     def forward(self, x):
-        return x.view(self.viewargs)
+        return x.view(self._view_args)
 
     def get_output_shape(self, input_shape):
-        return U.shape_view(input_shape, self.viewargs)
+        return U.shape_view(input_shape, self._view_args)
 
 
 class Slice(Layer):
     def __init__(self, slice, *, input_shape=None, **kwargs):
         super().__init__(input_shape=input_shape, **kwargs)
-        self.slice = slice
+        self._slice = slice
 
     def _build(self, input_shape):
         pass
 
     def forward(self, x):
-        return x[self.slice]
+        return x[self._slice]
 
     def get_output_shape(self, input_shape):
-        return U.shape_slice(input_shape, self.slice)
+        return U.shape_slice(input_shape, self._slice)
 
 
 # ==================== functional forms ====================
+def flatten(x):
+    return Flatten()(x)
+
+
+def view(x, *args):
+    return View(*args)(x)
+
+
 def slice(x, slice):
     return Slice(slice)(x)
-
