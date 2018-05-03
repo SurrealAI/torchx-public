@@ -5,7 +5,7 @@ import math
 import numpy as np
 import torch
 from functools import partial
-from .nested import recursive_map, recursive_all, recursive_compare
+from .recursive import recursive_map, recursive_all, recursive_compare
 from .numpy_utils import product
 
 
