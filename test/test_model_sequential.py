@@ -45,7 +45,7 @@ def test_conv_sequential():
         Conv2d(21,
                kernel_size=(5, 3),
                padding=(14, 16)),
-        ReLU(),
+        PReLU(shared=False),
         Conv2d(15,
                kernel_size=(3, 17),
                stride=(4, 5),
@@ -149,7 +149,7 @@ def test_rnn_with_state():
             num_layers=4,
             bidirectional=True),
         GetRNNOutput(),
-        PReLU()
+        PReLU(shared=False)
     ])
     check_inferred_shape('GRU, output', locals())
 
@@ -191,7 +191,7 @@ def test_time_distributed():
                kernel_size=(5, 3),
                dilation=2,
                padding=(14, 16)),
-        nn.ReLU(),
+        PReLU(shared=False),
         Conv2d(2,
                kernel_size=(1, 3),
                stride=(2, 1),

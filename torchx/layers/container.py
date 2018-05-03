@@ -52,8 +52,8 @@ class Lambda(Layer):
 
         if not cls_name:
             cls_name = cls.__name__
-            
-        return type(  # subclasses are properly registered in LayerMeta
+
+        return type(  # subclasses will be properly registered in LayerMeta
             cls_name,
             (Lambda,),
             {'__init__': _wrapped__init__}
