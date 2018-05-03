@@ -5,7 +5,7 @@ import math
 import numpy as np
 import torch
 from functools import partial
-from .nested import recursive_map, recursive_combine, recursive_compare
+from .nested import recursive_map, recursive_all, recursive_compare
 from .numpy_utils import product
 
 
@@ -13,37 +13,24 @@ def is_simple_shape(shape):
     "Returns: whether a shape is list of ints"
     return (
         isinstance(shape, (list, tuple)) and
-        all(map(lambda d : isinstance(d, int) and d > 0, shape))
+        all(map(lambda d : (isinstance(d, int) and d > 0) or d is None, shape))
     )
 
 
-def is_multi_shape(shape):
-    """
-    For RNN shape: (output, h, c)
-    Max two-level of nesting
-    """
+def is_sequence_shape(shape):
+    "shapes like [shape1, shape2, shape3]"
     return (
-        isinstance(shape, (list, tuple)) and
-        all(map(is_simple_shape, shape))
+        isinstance(shape, (list, tuple))
+        and all(is_valid_shape(s) for s in shape)
     )
 
 
-def is_dict_shape(shape):
-    """
-    One level of dict of shapes
-    """
-    return (
-        isinstance(shape, dict) and
-        all(is_multi_shape(s) or is_simple_shape(s) for s in shape.values())
-    )
-
-
-def is_valid_shape(shape, *,
-                   allow_simple=True, allow_multi=True, allow_dict=True):
-    return (
-        (allow_simple and is_simple_shape(shape)) or
-        (allow_multi and is_multi_shape(shape)) or
-        (allow_dict and is_dict_shape(shape))
+def is_valid_shape(shape):
+    return recursive_all(
+        shape,
+        func=lambda _: True,
+        is_base=is_simple_shape,
+        unknown_type_handler=lambda _: False
     )
 
 

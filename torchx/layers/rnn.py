@@ -160,7 +160,7 @@ class GetRNNOutput(Layer):
             return x
 
     def get_output_shape(self, input_shape):
-        if U.is_multi_shape(input_shape):
+        if U.is_sequence_shape(input_shape):
             # input_shape is a nested tuple, means upstream return_state=True
             return input_shape[0]
         else:
@@ -214,7 +214,7 @@ class GetRNNState(Layer):
                          'please set return_state=True in upstream RNN Layer')
 
     def get_output_shape(self, input_shape):
-        if U.is_multi_shape(input_shape):
+        if U.is_sequence_shape(input_shape):
             # input_shape is a nested tuple, means upstream return_state=True
             if self.mode == 'h':
                 return input_shape[1]

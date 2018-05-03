@@ -14,8 +14,8 @@ class MergeLayer(Layer):
         pass
 
     def _check_shape(self, input_shape):
-        assert U.is_multi_shape(input_shape), \
-            self.__class__.__name__ + ' input_shape should be a sequence of tuples'
+        assert U.is_sequence_shape(input_shape), \
+            self.__class__.__name__ + ' input_shape should be a list/tuple of shapes'
 
     __call__ = U.method_decorator(U.enable_varargs)(Layer.__call__)
 

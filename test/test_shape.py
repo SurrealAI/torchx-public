@@ -35,3 +35,20 @@ def test_slice():
     check_slice([50, 6, 17], G[0, 1, -1])
     check_slice([50, 6, 17], G[:0, ...])
 
+
+def test_is_valid_shape():
+    assert U.is_valid_shape([3, 4, 5])
+    assert not U.is_valid_shape([3, 4, -1])
+    assert U.is_valid_shape([[3, 4], [2], [[[[[4]]]]]])
+    assert not U.is_valid_shape([[3, 4], [2], 10, [[[[[4]]]]]])
+    assert not U.is_valid_shape([[3, 4], [2], [[[[['bad']]]]]])
+    assert U.is_valid_shape({'a': [2,3], 'b':{'c':{'d': [3, 4]}}})
+    assert not U.is_valid_shape({'a': 100})
+    assert not U.is_valid_shape({'a': [2,3], 'b':{'c':{'d': [3, 4], 'e': 10}}})
+
+
+def test_is_sequence_shape():
+    assert U.is_sequence_shape([[3], {'a': [1,2]}, [[5]]])
+    assert not U.is_sequence_shape([[3], {'a': [1,2]}, 10])
+    assert not U.is_sequence_shape([10])
+    assert not U.is_sequence_shape({'a': [3, 4, 5]})

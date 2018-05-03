@@ -231,12 +231,6 @@ class Functional(Layer):
             output_node.bind_tensors(output_tensors)
         return self.outputs.to_tensors()
 
-    # def compile(self):
-    #     """
-    #     """
-    #     self.build(self.inputs.get_shape())
-    #     return self
-
     def _build(self, input_shape):
         # layers are already built at placeholder call time
         for layer, node_index in self.postorder_traverse():
