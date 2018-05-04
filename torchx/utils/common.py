@@ -185,24 +185,25 @@ class SaveInitArgsMeta(type):
     Bounded arguments:
     https://docs.python.org/3/library/inspect.html#inspect.BoundArguments
 
-    Store the captured constructor arguments to <instance>._init_args
-    as OrderedDict. Can be retrieved by the property method <obj>.init_args
+    Store the captured constructor arguments to <instance>._init_args_dict
+    as OrderedDict. Can be retrieved by the property method <obj>.init_args_dict
+    Includes both the positional args (with the arg name) and kwargs
     """
     def __init__(cls, name, bases, attrs):
         # WARNING: must add class method AFTER super.__init__
         # adding attrs['new-method'] before __init__ has no effect!
         super().__init__(name, bases, attrs)
         @property
-        def init_args(self):
-            return self._init_args
-        cls.init_args = init_args
+        def init_args_dict(self):
+            return self._init_args_dict
+        cls.init_args_dict = init_args_dict
 
     def __call__(cls, *args, **kwargs):
         obj = super().__call__(*args, **kwargs)
         try:
-            obj._init_args = _get_bound_args(obj.__init__, *args, **kwargs)
+            obj._init_args_dict = _get_bound_args(obj.__init__, *args, **kwargs)
         except TypeError:  # __init__ has special stuff like *args
-            obj._init_args = None
+            obj._init_args_dict = None
         return obj
 
 

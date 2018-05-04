@@ -85,7 +85,7 @@ class Module(nn.Module, SaveInitArgs):
     def save(self, fname):
         save_dict = OrderedDict()
         # from meta class SaveInitArgs
-        save_dict['init_args'] = self.init_args
+        save_dict['init_args_dict'] = self.init_args_dict
         save_dict['torch'] = self.state_dict()
         torch.save(save_dict, fname)
 
@@ -99,12 +99,12 @@ class Module(nn.Module, SaveInitArgs):
         Also load the saved constructor arguments
         """
         save_dict = torch.load(os.path.expanduser(fname))
-        init_args = save_dict['init_args']
-        if init_args is None:
-            raise ValueError('init_args not saved. '
+        init_args_dict = save_dict['init_args_dict']
+        if init_args_dict is None:
+            raise ValueError('init_args_dict not saved. '
              'This happens when the layer __init__() accepts special things like *args.'
              ' Please manually instantiate the object and use self.load() instead')
-        net = cls(**init_args)
+        net = cls(**init_args_dict)
         net.load_state_dict(save_dict['torch'])
         return net
 
@@ -124,5 +124,9 @@ class Module(nn.Module, SaveInitArgs):
                 p.copy_(n)
 
     def clone(self):
-        return type(self)(**self.init_args).copy_from(self)
+        if self.init_args_dict is None:
+            raise ValueError('init_args_dict not saved. '
+             'This happens when the layer __init__() accepts special things like *args.'
+             ' Please manually instantiate the object and use self.load() instead')
+        return type(self)(**self.init_args_dict).copy_from(self)
 
