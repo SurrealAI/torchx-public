@@ -111,6 +111,8 @@ def test_rnn_spec():
     }
     model = Layer.from_spec(nested_spec)
     check_inferred_shape(model, x, 'RNN (nested sequential)')
+    print(model.layer_list)
+    print(model)
 
 
 def test_time_distributed_spec():
@@ -182,3 +184,7 @@ def test_time_distributed_spec():
     model = Layer.from_spec(model.to_spec())
     shape_roundtrip = check_inferred_shape(model, x, 'TimeDistributed nested roundtrip')
     assert U.shape_equals(shape_gold, shape_roundtrip)
+    print(model)
+    Layer.set_print_mode('native')
+    print(model)
+    Layer.set_print_mode('torchx')

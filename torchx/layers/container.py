@@ -1,8 +1,9 @@
+import textwrap
 import torch.nn as nn
+import torchx.utils as U
 
 from .base import Layer
 from .placeholder import PlaceholderStruct
-import torchx.utils as U
 
 
 class Lambda(Layer):
@@ -157,6 +158,15 @@ class Sequential(Layer):
         for layer in self.layer_list:
             spec['layers'].append(layer.to_spec())
         return spec
+
+    def __repr__(self):
+        cls_name = self.__class__.__name__
+        lines = [cls_name + '[']
+        for layer in self.layer_list:
+            line = textwrap.indent(repr(layer), prefix='  ')
+            lines.append(line + ',')
+        lines.append(']')
+        return '\n'.join(lines)
 
 
 class TimeDistributed(Sequential):

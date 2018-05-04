@@ -17,6 +17,8 @@ class _LayerMeta(U.SaveInitArgsMeta):
 
 
 class Layer(Module, metaclass=_LayerMeta):
+    _PRINT_MODE = 'torchx'
+
     """
     API is very similar to Keras sequential mode, used in `SequentialModel`
     https://keras.io/getting-started/sequential-model-guide/
@@ -197,6 +199,37 @@ class Layer(Module, metaclass=_LayerMeta):
         spec = {'type': self.__class__.__name__}
         spec.update(self.init_args_dict)  # positional args fall under `None` key
         return spec
+
+    @classmethod
+    def set_print_mode(cls, mode):
+        mode = mode.lower()
+        assert mode in ['torchx', 'native']
+        cls._PRINT_MODE = mode
+
+    def __repr__(self):
+        if self._PRINT_MODE == 'native':
+            return super().__repr__()
+        else:
+            # repr string will look like the init call
+            init_dict = self.init_args_dict.copy()
+            cls_name = self.__class__.__name__
+            if None in init_dict:
+                positionals = init_dict.pop(None)
+                assert isinstance(positionals, (list, tuple)), \
+                    'internal error, None key should map to a sequence'
+                positionals = ', '.join(map(repr, positionals))
+            else:
+                positionals = ''
+            if init_dict:
+                kwargs = ', '.join(
+                    '{}={}'.format(key, repr(value))
+                    for key, value in init_dict.items()
+                )
+            else:
+                kwargs = ''
+            if positionals and kwargs:
+                positionals += ', '
+            return '{}({}{})'.format(cls_name, positionals, kwargs)
 
 
 def get_torch_builtin_modules(pkg_name):

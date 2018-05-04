@@ -24,15 +24,6 @@ class Linear(Layer):
     def get_native(self):
         return self._fc
 
-    def __repr__(self):
-        if self.is_built:
-            input_features = self.input_shape[-1]
-        else:
-            input_features = None
-        return '{}({}->{})'.format(
-            self.__class__.__name__, input_features, self.out_features
-        )
-
 
 class Dense(Linear):
     "Alias for Linear"
