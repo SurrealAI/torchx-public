@@ -142,7 +142,7 @@ class Layer(Module, metaclass=_LayerMeta):
         return _LayerMeta._registry
 
     @classmethod
-    def create(cls, spec):
+    def from_spec(cls, spec):
         """
         Create a new Layer from a spec dict
         spec semantics:
@@ -169,10 +169,10 @@ class Layer(Module, metaclass=_LayerMeta):
         else:
             args = ()
         kwargs = spec
-        return layer_cls._create(args, kwargs)
+        return layer_cls._from_spec(args, kwargs)
 
     @classmethod
-    def _create(cls, args, kwargs):
+    def _from_spec(cls, args, kwargs):
         """
         Override this classmethod if you want to customize load-from-dict behavior
         Defaults to simply calling the constructor

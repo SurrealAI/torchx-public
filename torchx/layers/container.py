@@ -116,7 +116,7 @@ class Sequential(Layer):
         return input_shape
 
     @classmethod
-    def _create(cls, args, kwargs):
+    def _from_spec(cls, args, kwargs):
         """
         spec semantics:
         - must have "type" key, value should be name of subclasses of Sequential
@@ -137,7 +137,7 @@ class Sequential(Layer):
         assert isinstance(layer_list, (list, tuple))
 
         return cls([
-            Layer.create(spec) for spec in layer_list
+            Layer.from_spec(spec) for spec in layer_list
         ])
 
     def to_spec(self):
@@ -281,6 +281,6 @@ class Functional(Layer):
         return self.outputs.get_shape()
 
     @classmethod
-    def _create(cls, args, kwargs):
+    def _from_spec(cls, args, kwargs):
         # TODO
         raise NotImplementedError('cannot create Functional model from spec')

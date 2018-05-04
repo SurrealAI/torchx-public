@@ -34,7 +34,7 @@ def test_sequential_spec():
         ]
     }
 
-    model = Layer.create(spec)
+    model = Layer.from_spec(spec)
 
     check_inferred_shape(model, x, 'conv')
 
@@ -78,7 +78,7 @@ def test_rnn_spec():
         ]
     }
 
-    model = Layer.create(spec)
+    model = Layer.from_spec(spec)
     check_inferred_shape(model, x, 'RNN')
 
     nested_spec = {
@@ -104,7 +104,7 @@ def test_rnn_spec():
             }
         ]
     }
-    model = Layer.create(nested_spec)
+    model = Layer.from_spec(nested_spec)
     check_inferred_shape(model, x, 'RNN (nested sequential)')
 
 
@@ -134,7 +134,7 @@ def test_time_distributed_spec():
             }
         ]
     }
-    model = Layer.create(spec)
+    model = Layer.from_spec(spec)
     check_inferred_shape(model, x, 'TimeDistributed')
 
     model.add(Sequential(
@@ -172,6 +172,6 @@ def test_time_distributed_spec():
         ]
     }
 
-    model = Layer.create(nested_spec)
+    model = Layer.from_spec(nested_spec)
     check_inferred_shape(model, x, 'TimeDistributed nested sequential')
 
