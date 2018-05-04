@@ -140,6 +140,14 @@ class Sequential(Layer):
             Layer.create(spec) for spec in layer_list
         ])
 
+    def to_spec(self):
+        spec = {}
+        spec['type'] = self.__class__.__name__
+        spec['layers'] = []
+        for layer in self.layer_list:
+            spec['layers'].append(layer.to_spec())
+        return spec
+
 
 class TimeDistributed(Sequential):
     """

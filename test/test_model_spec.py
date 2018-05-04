@@ -53,6 +53,8 @@ def test_sequential_spec():
     )
     check_inferred_shape(model, x, 'conv after add')
 
+    print(model.to_spec())
+
 
 def test_rnn_spec():
     x = new_tensor((10, 13, 17))  # batch_size, seq_len, feature_dim

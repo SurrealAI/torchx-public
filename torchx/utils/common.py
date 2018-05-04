@@ -180,7 +180,7 @@ def _get_bound_args(func, *args, **kwargs):
     return arginfo.arguments
 
 
-class SaveInitArgsMeta(type):
+class _Deprecated_SaveInitArgsMeta(type):
     """
     Bounded arguments:
     https://docs.python.org/3/library/inspect.html#inspect.BoundArguments
@@ -204,6 +204,31 @@ class SaveInitArgsMeta(type):
             obj._init_args_dict = _get_bound_args(obj.__init__, *args, **kwargs)
         except TypeError:  # __init__ has special stuff like *args
             obj._init_args_dict = None
+        return obj
+
+
+class SaveInitArgsMeta(type):
+    """
+    Store __init__ call args in self.init_args_dict
+    Positional args to __init__ will be stored under `None` key
+    Keyword args to __init__ will be stored as-is in init_args_dict
+    """
+    def __init__(cls, name, bases, attrs):
+        # WARNING: must add class method AFTER super.__init__
+        # adding attrs['new-method'] before __init__ has no effect!
+        super().__init__(name, bases, attrs)
+        @property
+        def init_args_dict(self):
+            return self._init_args_dict
+        cls.init_args_dict = init_args_dict
+
+    def __call__(cls, *args, **kwargs):
+        obj = super().__call__(*args, **kwargs)
+        init_dict = {}
+        if args:
+            init_dict[None] = list(args)  # convert to list for YAML compatibility
+        init_dict.update(kwargs)
+        obj._init_args_dict = init_dict
         return obj
 
 

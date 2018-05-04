@@ -100,11 +100,9 @@ class Module(nn.Module, SaveInitArgs):
         """
         save_dict = torch.load(os.path.expanduser(fname))
         init_args_dict = save_dict['init_args_dict']
-        if init_args_dict is None:
-            raise ValueError('init_args_dict not saved. '
-             'This happens when the layer __init__() accepts special things like *args.'
-             ' Please manually instantiate the object and use self.load() instead')
-        net = cls(**init_args_dict)
+        positionals = init_args_dict.pop(None, [])  # under key None
+        kwargs = init_args_dict
+        net = cls(*positionals, **kwargs)
         net.load_state_dict(save_dict['torch'])
         return net
 

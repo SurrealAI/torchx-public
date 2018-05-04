@@ -181,6 +181,15 @@ class Layer(Module, metaclass=_LayerMeta):
         """
         return cls(*args, **kwargs)
 
+    def to_spec(self):
+        """
+        Returns:
+            spec dict as described in `from_spec`
+        """
+        spec = {'type': self.__class__.__name__}
+        spec.update(self.init_args_dict)  # positional args fall under `None` key
+        return spec
+
 
 def get_torch_builtin_modules(pkg_name):
     """
