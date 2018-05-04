@@ -40,7 +40,7 @@ class View(Layer):
         return x.view(self._view_args)
 
     def get_output_shape(self, input_shape):
-        return U.shape_view(input_shape, self._view_args)
+        return U.shape_view(input_shape, *self._view_args)
 
 
 class Slice(Layer):
@@ -59,8 +59,8 @@ class Slice(Layer):
 
 
 # ==================== functional forms ====================
-def flatten(x):
-    return Flatten()(x)
+def flatten(x, start_dim=1):
+    return Flatten(start_dim=start_dim)(x)
 
 
 def view(x, *args):

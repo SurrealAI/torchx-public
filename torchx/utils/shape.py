@@ -7,6 +7,7 @@ import torch
 from functools import partial
 from .recursive import recursive_map, recursive_all, recursive_compare
 from .numpy_utils import product
+from .common import pack_varargs
 
 
 def is_simple_shape(shape):
@@ -155,8 +156,9 @@ def shape_view(input_shape, *view_args):
     Can only have at most one "-1" dimension to be inferred.
     The expand() trick doesn't work because the input must be contiguous.
     """
-    # TODO handle input shape with None
-    view_args = list(view_args)
+    # TODO handle input_shape contains None
+    assert is_simple_shape(input_shape)
+    view_args = list(pack_varargs(view_args))
     assert view_args.count(-1) <= 1, 'can have at most one -1 for inferring shape'
     old_elems = product(input_shape)
     new_elems = product(view_args)

@@ -61,15 +61,15 @@ class Lambda(Layer):
 
 
 class Sequential(Layer):
-    @U.method_decorator(U.enable_varargs)
-    def __init__(self, layer_list):
+    def __init__(self, *layers):
         """
         Args:
-            layer_list: accepts both a single list or *args
+            layers: accepts both a single list or *args
         """
         super().__init__()
-        assert len(layer_list) >= 1
-        self.layer_list = list(map(self._wrap_same_shape, layer_list))
+        layers = U.pack_varargs(layers)
+        assert len(layers) >= 1
+        self.layer_list = list(map(self._wrap_same_shape, layers))
         # ModuleList must be created after init, otherwise PyTorch error
         self.module_list = nn.ModuleList()
 
@@ -86,14 +86,12 @@ class Sequential(Layer):
             # first layer in Sequential must have input_shape != None
             return Lambda(layer, get_output_shape=None)
 
-    @U.method_decorator(U.enable_varargs)
-    def add(self, layers):
+    def add(self, *layers):
         """
         Args:
-            layer: can be a single Layer or a list of Layers
+            layers: accepts both a single list or *args
         """
-        if not isinstance(layers, (list, tuple)):
-            layers = [layers]
+        layers = U.pack_varargs(layers)
         for layer in layers:
             layer = self._wrap_same_shape(layer)
             if self.is_built:

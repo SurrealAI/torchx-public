@@ -351,6 +351,21 @@ def deprecated(func, msg='', action='warning'):
     return _deprecated
 
 
+def pack_varargs(args):
+    """
+    Pack *args or a single list arg as list
+
+    def f(*args):
+        arg_list = pack_varargs(args)
+        # arg_list is now packed as a list
+    """
+    assert isinstance(args, tuple), 'please input the tuple `args` as in *args'
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        return args[0]
+    else:
+        return args
+
+
 def enable_list_arg(func):
     """
     Function decorator.
@@ -359,8 +374,7 @@ def enable_list_arg(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], (list, tuple)):
-            args = args[0]
+        args = pack_varargs(args)
         return func(*args, **kwargs)
     return wrapper
 
@@ -372,10 +386,25 @@ def enable_varargs(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], (list, tuple)):
-            args = args[0]
+        args = pack_varargs(args)
         return func(args, **kwargs)
     return wrapper
+
+
+def pack_kwargs(args, kwargs):
+    """
+    Pack **kwargs or a single dict arg as dict
+
+    def f(*args, **kwargs):
+        kwdict = pack_kwargs(args, kwargs)
+        # kwdict is now packed as a dict
+    """
+    if len(args) == 1 and isinstance(args[0], dict):
+        assert not kwargs, 'cannot have both kwargs and a dict arg'
+        return args[0]  # single-dict
+    else:
+        assert not args, 'cannot have positional args if kwargs exist'
+        return kwargs
 
 
 def enable_dict_arg(func):
@@ -386,11 +415,7 @@ def enable_dict_arg(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], dict):
-            assert not kwargs, 'cannot have both kwargs and a dict arg'
-            kwargs = args[0]
-        else:
-            assert not args, 'cannot have positional args if kwargs exist'
+        kwargs = pack_kwargs(args, kwargs)
         return func(**kwargs)
     return wrapper
 
@@ -402,11 +427,7 @@ def enable_kwargs(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], dict):
-            assert not kwargs, 'cannot have both kwargs and a dict arg'
-            kwargs = args[0]
-        else:
-            assert not args, 'cannot have positional args if kwargs exist'
+        kwargs = pack_kwargs(args, kwargs)
         return func(kwargs)
     return wrapper
 

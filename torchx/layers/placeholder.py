@@ -35,8 +35,8 @@ class Placeholder:
     def view(self, *args):
         return self._Reshape.view(self, *args)
 
-    def flatten(self):
-        return self._Reshape.flatten(self)
+    def flatten(self, start_dim=1):
+        return self._Reshape.flatten(self, start_dim=start_dim)
 
     def __getitem__(self, slice):
         return self._Reshape.slice(self, slice)

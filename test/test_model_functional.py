@@ -83,6 +83,24 @@ def test_placeholder_overload():
     check_inferred_shape(model, [xv, yv], 'placeholder overload')
 
 
+def test_placeholder_reshape():
+    x = Placeholder((5, 2, 3, 4))
+    y = Placeholder((5, 2, 3*4))
+
+    for out in [
+        x.flatten(start_dim=2) + y,
+        x * y.view(5, 2, -1, 4),
+        x * y.view(-1, 2, 3, 4),
+        x.flatten() + y.flatten(),
+        x.flatten().view(-1, 4) - y.flatten(start_dim=0).view(5*2*3, -1)
+    ]:
+        model = Functional(inputs=[x, y], outputs=out)
+
+        xv = fill_tensor(x.shape, 3)
+        yv = fill_tensor(y.shape, 5)
+        check_inferred_shape(model, [xv, yv], 'placeholder reshape')
+
+
 def single_node_testcases(input_case_id, output_case_id):
     """
     provide cartesian-product test cases for test_single_node
@@ -155,6 +173,7 @@ def multi_node_testcases(input_case_id, output_case_id):
     concat_xyx = concat(x1, y1, x1)[:, :17*3]
     assert concat_xyx.shape == (12, 51)
     concat_yxy = concat(y1, x1, y1)[:, -17*3:]
+    concat_yxy = PReLU(shared=False)(concat_yxy)
     assert concat_yxy.shape == (12, 51)
     shared2 = Dense(47)
     shared3 = Dense(47)
