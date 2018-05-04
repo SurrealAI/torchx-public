@@ -10,16 +10,17 @@ class MaxPoolNd(Layer):
         assert 1 <= dim <= 3
         self.dim = dim
         self.pool_kwargs = kwargs
-        self.PoolClass = [nn.MaxPool1d, nn.MaxPool2d, nn.MaxPool3d][dim - 1]
+        self._PoolClass = [nn.MaxPool1d, nn.MaxPool2d, nn.MaxPool3d][dim - 1]
+        self._pool = None
 
     def _build(self, input_shape):
-        self.pool = self.PoolClass(
+        self._pool = self._PoolClass(
             self.kernel_size,
             **self.pool_kwargs
         )
 
     def forward(self, x):
-        return self.pool(x)
+        return self._pool(x)
 
     def get_output_shape(self, input_shape):
         return U.shape_poolnd(
@@ -29,6 +30,9 @@ class MaxPoolNd(Layer):
             has_batch=True,
             **self.pool_kwargs
         )
+
+    def get_native(self):
+        return self._pool
 
 
 class MaxPool1d(MaxPoolNd):
@@ -49,7 +53,7 @@ class MaxPool3d(MaxPoolNd):
 class AvgPoolNd(MaxPoolNd):
     def __init__(self, dim, kernel_size, **kwargs):
         super().__init__(dim, kernel_size, **kwargs)
-        self.PoolClass = [nn.AvgPool1d, nn.AvgPool2d, nn.AvgPool3d][dim - 1]
+        self._PoolClass = [nn.AvgPool1d, nn.AvgPool2d, nn.AvgPool3d][dim - 1]
 
     def get_output_shape(self, input_shape):
         return U.shape_poolnd(

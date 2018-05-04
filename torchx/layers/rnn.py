@@ -49,7 +49,7 @@ class RNNBase(Layer):
             single tensor, (10, 90)
         """
         super().__init__()
-        self.RNNClass = rnn_class
+        self._RNNClass = rnn_class
         self.rnn_state_arity = rnn_state_arity
         self.hidden_size = hidden_size
         self.bidirectional = bidirectional
@@ -58,11 +58,12 @@ class RNNBase(Layer):
         self.return_sequences = return_sequences
         self.return_state = return_state
         self.rnn_kwargs = kwargs
+        self._rnn = None
 
     def _build(self, input_shape):
         assert len(input_shape) == 3
         _, seq_len, features = input_shape
-        self.rnn = self.RNNClass(
+        self._rnn = self._RNNClass(
             input_size=features,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
@@ -72,7 +73,7 @@ class RNNBase(Layer):
         )
 
     def forward(self, x):
-        output, states = self.rnn(x)
+        output, states = self._rnn(x)
         if not isinstance(states, tuple):
             states = (states,)
         assert len(states) == self.rnn_state_arity, 'wrong rnn_state_arity'
@@ -110,6 +111,9 @@ class RNNBase(Layer):
             return (output_shape, *state_shapes)
         else:
             return output_shape
+
+    def get_native(self):
+        return self._rnn
 
 
 class SimpleRNN(RNNBase):

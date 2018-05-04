@@ -11,11 +11,12 @@ class ConvNd(Layer):
         assert 1 <= dim <= 3
         self.dim = dim
         self.conv_kwargs = kwargs
-        self.ConvClass = [nn.Conv1d, nn.Conv2d, nn.Conv3d][dim - 1]
+        self._ConvClass = [nn.Conv1d, nn.Conv2d, nn.Conv3d][dim - 1]
+        self._conv = None
 
     def _build(self, input_shape):
         in_channels = input_shape[1]
-        self.conv = self.ConvClass(
+        self._conv = self._ConvClass(
             in_channels,
             self.out_channels,
             kernel_size=self.kernel_size,
@@ -23,7 +24,7 @@ class ConvNd(Layer):
         )
 
     def forward(self, x):
-        return self.conv(x)
+        return self._conv(x)
 
     def get_output_shape(self, input_shape):
         return U.shape_convnd(
@@ -34,6 +35,9 @@ class ConvNd(Layer):
             has_batch=True,
             **self.conv_kwargs
         )
+
+    def get_native(self):
+        return self._conv
 
 
 class Conv1d(ConvNd):
@@ -59,12 +63,13 @@ class ConvTransposeNd(Layer):
         assert 1 <= dim <= 3
         self.dim = dim
         self.conv_kwargs = kwargs
-        self.ConvTransposeClass = \
+        self._ConvTransposeClass = \
             [nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d][dim - 1]
+        self._conv = None
 
     def _build(self, input_shape):
         in_channels = input_shape[1]
-        self.conv_t = self.ConvTransposeClass(
+        self._conv = self._ConvTransposeClass(
             in_channels,
             self.out_channels,
             kernel_size=self.kernel_size,
@@ -72,7 +77,7 @@ class ConvTransposeNd(Layer):
         )
 
     def forward(self, x):
-        return self.conv_t(x)
+        return self._conv(x)
 
     def get_output_shape(self, input_shape):
         return U.shape_transpose_convnd(
@@ -83,6 +88,9 @@ class ConvTransposeNd(Layer):
             has_batch=True,
             **self.conv_kwargs
         )
+
+    def get_native(self):
+        return self._conv
 
 
 class ConvTranspose1d(ConvTransposeNd):

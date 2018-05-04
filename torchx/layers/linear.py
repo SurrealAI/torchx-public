@@ -6,18 +6,23 @@ class Linear(Layer):
     def __init__(self, out_features, bias=True):
         super().__init__()
         self.out_features = out_features
-        self.has_bias = bias
+        self._has_bias = bias
+        self._fc = None
 
     def _build(self, input_shape):
         in_features = input_shape[-1]
-        self.fc = torch.nn.Linear(
-            in_features, self.out_features, bias=self.has_bias)
+        self._fc = torch.nn.Linear(
+            in_features, self.out_features, bias=self._has_bias
+        )
 
     def forward(self, x):
-        return self.fc(x)
+        return self._fc(x)
 
     def get_output_shape(self, input_shape):
         return (*input_shape[:-1], self.out_features)
+
+    def get_native(self):
+        return self._fc
 
     def __repr__(self):
         if self.is_built:

@@ -44,6 +44,14 @@ class Layer(Module, metaclass=_LayerMeta):
     def get_output_shape(self, input_shape):
         raise NotImplementedError
 
+    def get_native(self):
+        """
+        Returns:
+            underlying native torch.nn.Module or a list/dict of nn.Module
+            return None if the layer does not have learnable parameters
+        """
+        return None
+
     @property
     def is_built(self):
         return self.input_shape is not None

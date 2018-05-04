@@ -27,22 +27,26 @@ class BatchNormNd(Layer):
             affine=affine,
             track_running_stats=track_running_stats
         )
-        self.NormClass = [
+        self._NormClass = [
             nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d
         ][dim - 1]
+        self._normalizer = None
 
     def _build(self, input_shape):
         """
         C from [N, C, ...] input shape        
         """
         channel = input_shape[1]
-        self.batch_norm = self.NormClass(channel, **self.norm_kwargs)
+        self._normalizer = self._NormClass(channel, **self.norm_kwargs)
 
     def forward(self, x):
-        return self.batch_norm(x)
+        return self._normalizer(x)
 
     def get_output_shape(self, input_shape):
         return input_shape
+    
+    def get_native(self):
+        return self._normalizer
 
 
 class BatchNorm1d(BatchNormNd):
@@ -88,22 +92,26 @@ class InstanceNormNd(Layer):
             affine=affine,
             track_running_stats=track_running_stats
         )
-        self.NormClass = [
+        self._NormClass = [
             nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d
         ][dim - 1]
+        self._normalizer = None
 
     def _build(self, input_shape):
         """
         C from [N, C, ...] input shape
         """
         channel = input_shape[1]
-        self.instance_norm = self.NormClass(channel, **self.norm_kwargs)
+        self._normalizer = self._NormClass(channel, **self.norm_kwargs)
 
     def forward(self, x):
-        return self.instance_norm(x)
+        return self._normalizer(x)
 
     def get_output_shape(self, input_shape):
         return input_shape
+    
+    def get_native(self):
+        return self._normalizer
 
 
 class InstanceNorm1d(InstanceNormNd):
@@ -145,6 +153,7 @@ class LayerNorm(Layer):
             elementwise_affine=elementwise_affine
         )
         self.num_normalize_dim = num_normalize_dim
+        self._normalizer = None
 
     def _build(self, input_shape):
         """
@@ -157,13 +166,16 @@ class LayerNorm(Layer):
         assert self.num_normalize_dim <= len(input_shape) - 1, \
             'num_normalize_dim must be at most input dim - 1'
         normalized_shape = input_shape[-self.num_normalize_dim:]
-        self.layer_norm = nn.LayerNorm(normalized_shape, **self.norm_kwargs)
+        self._normalizer = nn.LayerNorm(normalized_shape, **self.norm_kwargs)
 
     def forward(self, x):
-        return self.layer_norm(x)
+        return self._normalizer(x)
 
     def get_output_shape(self, input_shape):
         return input_shape
+
+    def get_native(self):
+        return self._normalizer
 
 
 class GroupNorm(Layer):
@@ -183,6 +195,7 @@ class GroupNorm(Layer):
             affine=affine
         )
         self.num_groups = num_groups
+        self._normalizer = None
 
     def _build(self, input_shape):
         """
@@ -192,14 +205,17 @@ class GroupNorm(Layer):
         assert channel % self.num_groups == 0, \
             'number of groups {} must divide number of channels {}'.format(
                 self.num_groups, channel)
-        self.group_norm = nn.GroupNorm(
+        self._normalizer = nn.GroupNorm(
             self.num_groups, channel, **self.norm_kwargs)
 
     def forward(self, x):
-        return self.group_norm(x)
+        return self._normalizer(x)
 
     def get_output_shape(self, input_shape):
         return input_shape
+
+    def get_native(self):
+        return self._normalizer
 
 
 # ========= Same shape layers with no learnable parameters ===============
