@@ -9,7 +9,7 @@ def test_sequential_spec():
     x = new_tensor((12, 13, 68, 78))
 
     spec = {
-        'type': 'Sequential',
+        'type': 'sequential',  # case insensitive
         None: [
             {
                 'type': 'Conv2d',
@@ -21,11 +21,11 @@ def test_sequential_spec():
                 'shared': False
             },
             {
-                'type': 'LeakyReLU',
+                'type': 'leakyrelu',
                 None: 0.3
             },
             {
-                'type': 'MaxPool2d',
+                'type': 'maxpool2D',
                 **dict(kernel_size=13,
                        stride=(1, 3),
                        dilation=2,
@@ -61,7 +61,7 @@ def test_rnn_spec():
         'type': 'Sequential',
         'layers': [
             {
-                'type': 'SimpleRNN',
+                'type': 'simplernn',
                 None: 23,
                 'return_sequences': True,
                 'return_state': True,
@@ -80,14 +80,14 @@ def test_rnn_spec():
     check_inferred_shape(model, x, 'RNN')
 
     nested_spec = {
-        'type': 'Sequential',
+        'type': 'sequential',
         'layers': [
             {
-                'type': 'ELU'
+                'type': 'elu'
             },
             spec,  # from above
             {
-                'type': 'GRU',
+                'type': 'gru',
                 None: [23],
                 **dict(
                     return_sequences=False,

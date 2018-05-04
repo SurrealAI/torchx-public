@@ -151,6 +151,21 @@ def iter_last(iterable):
     return ((i == length-1, x) for i, x in enumerate(iterable))
 
 
+def case_insensitive_match(items, key):
+    """
+    Args:
+        items: iterable of keys
+        key: search for the key case-insensitively
+
+    Returns:
+        matched original key (with cases), None if no match
+    """
+    for k in items:
+        if k.lower() == key.lower():
+            return k
+    return None
+
+
 def _get_bound_args(func, *args, **kwargs):
     """
     https://docs.python.org/3/library/inspect.html#inspect.BoundArguments

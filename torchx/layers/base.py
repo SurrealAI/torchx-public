@@ -158,9 +158,10 @@ class Layer(Module, metaclass=_LayerMeta):
         spec = spec.copy()
         cls_name = spec.pop('type')
         registry = Layer.get_registry()
-        assert cls_name in registry, \
+        cls_name_cased = U.case_insensitive_match(registry.keys(), cls_name)
+        if cls_name_cased is None:
             'Layer type "{}" not found in registry.'.format(cls_name)
-        layer_cls = registry[cls_name]
+        layer_cls = registry[cls_name_cased]
         if None in spec:
             args = spec.pop(None)
             if not isinstance(args, (list, tuple)):
