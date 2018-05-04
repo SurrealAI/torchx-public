@@ -19,6 +19,7 @@ def check_inferred_shape(model, x, msg):
     print(msg, inferred_shape)
     assert U.shape_equals(inferred_shape, actual_shape), \
         ('inferred', inferred_shape, 'actual', actual_shape)
+    return actual_shape
 
 
 def test_dense_sequential():
@@ -36,7 +37,7 @@ def test_dense_sequential():
 
 
 def test_conv_sequential():
-    input_shape= (12, 13, 128, 256)
+    input_shape= (4, 13, 128, 256)
     x = new_tensor(input_shape)
 
     model = Sequential([

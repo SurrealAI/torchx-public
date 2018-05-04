@@ -6,7 +6,7 @@ from .test_model_sequential import check_inferred_shape
 
 
 def test_sequential_spec():
-    x = new_tensor((12, 13, 68, 78))
+    x = new_tensor((6, 13, 68, 78))
 
     spec = {
         'type': 'sequential',  # case insensitive
@@ -51,9 +51,11 @@ def test_sequential_spec():
         ELU(),
         Flatten(),
     )
-    check_inferred_shape(model, x, 'conv after add')
+    shape_gold = check_inferred_shape(model, x, 'conv after add')
 
-    print(model.to_spec())
+    model = Layer.from_spec(model.to_spec())
+    shape_roundtrip = check_inferred_shape(model, x, 'conv roundtrip')
+    assert U.shape_equals(shape_gold, shape_roundtrip)
 
 
 def test_rnn_spec():
@@ -79,7 +81,10 @@ def test_rnn_spec():
     }
 
     model = Layer.from_spec(spec)
-    check_inferred_shape(model, x, 'RNN')
+    shape_gold = check_inferred_shape(model, x, 'RNN')
+    model = Layer.from_spec(model.to_spec())
+    shape_roundtrip = check_inferred_shape(model, x, 'RNN roundtrip spec')
+    assert U.shape_equals(shape_gold, shape_roundtrip)
 
     nested_spec = {
         'type': 'sequential',
@@ -173,5 +178,7 @@ def test_time_distributed_spec():
     }
 
     model = Layer.from_spec(nested_spec)
-    check_inferred_shape(model, x, 'TimeDistributed nested sequential')
-
+    shape_gold = check_inferred_shape(model, x, 'TimeDistributed nested sequential')
+    model = Layer.from_spec(model.to_spec())
+    shape_roundtrip = check_inferred_shape(model, x, 'TimeDistributed nested roundtrip')
+    assert U.shape_equals(shape_gold, shape_roundtrip)
