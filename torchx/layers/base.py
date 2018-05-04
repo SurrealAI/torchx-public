@@ -141,6 +141,45 @@ class Layer(Module, metaclass=_LayerMeta):
     def get_registry():
         return _LayerMeta._registry
 
+    @classmethod
+    def create(cls, spec):
+        """
+        Create a new Layer from a spec dict
+        spec semantics:
+        - required "type" key for Layer class name, can be case insensitive.
+        - optional `None` ('null' in JSON/YAML) key denotes positional *args,
+          should map to either a single object or a list/tuple
+        - all other keys will be passed as **kwargs to Layer type constructor
+
+        Args:
+            spec (dict)
+        """
+        assert 'type' in spec, 'must have at least "type" key in layer spec'
+        spec = spec.copy()
+        cls_name = spec.pop('type')
+        registry = Layer.get_registry()
+        assert cls_name in registry, \
+            'Layer type "{}" not found in registry.'.format(cls_name)
+        layer_cls = registry[cls_name]
+        if None in spec:
+            args = spec.pop(None)
+            if not isinstance(args, (list, tuple)):
+                args = (args,)
+        else:
+            args = ()
+        kwargs = spec
+        return layer_cls._create(args, kwargs)
+
+    @classmethod
+    def _create(cls, args, kwargs):
+        """
+        Override this classmethod if you want to customize load-from-dict behavior
+        Defaults to simply calling the constructor
+
+        Used heavily in container layer classes
+        """
+        return cls(*args, **kwargs)
+
 
 def get_torch_builtin_modules(pkg_name):
     """

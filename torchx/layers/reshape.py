@@ -4,17 +4,28 @@ from .base import Layer
 
 
 class Flatten(Layer):
+    def __init__(self, start_dim=1):
+        """
+        Args:
+            start_dim: flatten all dimensions starting from `start_dim`
+                default=1 means collapsing all but the batch dim
+        """
+        super().__init__()
+        self._start_dim = start_dim
+
     def _build(self, input_shape):
-        pass
+        assert U.is_simple_shape(input_shape)
+        assert self._start_dim < len(input_shape), \
+            'start_dim must be smaller than the number of dimensions'
 
     def forward(self, x):
-        return nnx.th_flatten(x)
+        return nnx.th_flatten(x, start_dim=self._start_dim)
 
     def get_output_shape(self, input_shape):
-        output_size = 1
-        for s in input_shape[1:]:  # exclude batch dim
-            output_size *= s
-        return (input_shape[0], output_size)
+        collapsed = 1
+        for s in input_shape[self._start_dim:]:
+            collapsed *= s
+        return (*input_shape[:self._start_dim], collapsed)
 
 
 class View(Layer):

@@ -35,12 +35,18 @@ def th_normalize_feature(feats):
     return (feats - mean) / std
 
 
-def th_flatten(x):
+def th_flatten(x, start_dim=1):
     """
     https://discuss.pytorch.org/t/runtimeerror-input-is-not-contiguous/930/4
     `.contiguous()` copies the tensor if the data isn't contiguous
+
+    Args:
+        start_dim: flatten all dimensions starting from `start_dim`
+            default=1 means collapsing all but the batch dim
     """
-    return x.contiguous().view(x.size(0), -1)
+    if start_dim >= len(x.size()):
+        raise ValueError('start_dim must be smaller than the number of dimensions')
+    return x.contiguous().view(*x.size()[:start_dim], -1)
 
 
 def _get_param_list(obj):

@@ -118,13 +118,28 @@ class Sequential(Layer):
         return input_shape
 
     @classmethod
-    def create(cls, spec_list):
+    def _create(cls, args, kwargs):
         """
-        spec must be a list, each entry follows the semantics in `Layer.create`
+        spec semantics:
+        - must have "type" key, value should be name of subclasses of Sequential
+            currently only "Sequential" and "TimeDistributed" are supported
+        - should have either None or "layers" key that maps to a list of layer specs
+        - each layer spec follows the semantics in `Layer.create`
         """
-        assert isinstance(spec_list, (list, tuple))
+        if kwargs:
+            assert 'layers' in kwargs or 'layer_list' in kwargs
+            if 'layers' in kwargs:
+                layer_list = kwargs['layers']
+            else:
+                layer_list = kwargs['layer_list']
+        elif args:
+            layer_list = args
+        else:
+            raise ValueError('spec must have either "layers" or None key')
+        assert isinstance(layer_list, (list, tuple))
+
         return cls([
-            super().create(spec) for spec in spec_list
+            Layer.create(spec) for spec in layer_list
         ])
 
 
@@ -259,3 +274,7 @@ class Functional(Layer):
     def get_output_shape(self, input_shape):
         return self.outputs.get_shape()
 
+    @classmethod
+    def _create(cls, args, kwargs):
+        # TODO
+        raise NotImplementedError('cannot create Functional model from spec')

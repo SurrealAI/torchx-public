@@ -3,11 +3,9 @@ from test.utils import *
 # pprint(get_layer_registry())
 
 
-def check_inferred_shape(msg, local_dict):
-    model = local_dict['model']
-    x = local_dict['x']
+def check_inferred_shape(model, x, msg):
     assert x.grad is None
-    input_shape = local_dict['input_shape']
+    input_shape = U.get_shape(x)
     inferred_shape = model.get_output_shape(input_shape)
 
     z = model(x)  # actual forward prop
@@ -34,7 +32,7 @@ def test_dense_sequential():
         LeakyReLU(0.1),  # torchx.layers
         Dense(77)
     )
-    check_inferred_shape('dense', locals())
+    check_inferred_shape(model, x, 'dense')
 
 
 def test_conv_sequential():
@@ -56,7 +54,7 @@ def test_conv_sequential():
                   dilation=2,
                   padding=(5, 6)),
     ])
-    check_inferred_shape('conv before flatten', locals())
+    check_inferred_shape(model, x, 'conv before flatten')
 
     model.add(
         Conv2d(5,
@@ -71,7 +69,7 @@ def test_conv_sequential():
         ELU(),
         Flatten(),
     )
-    check_inferred_shape('conv after flatten', locals())
+    check_inferred_shape(model, x, 'conv after flatten')
 
     model.add(Sequential([
         Dense(9),
@@ -80,7 +78,7 @@ def test_conv_sequential():
     ]))
     model.add(Dense(57))
 
-    check_inferred_shape('after dense', locals())
+    check_inferred_shape(model, x, 'after dense')
 
 
 def test_rnn_without_state():
@@ -93,7 +91,7 @@ def test_rnn_without_state():
         SELU(),
         GetRNNOutput(),  # essentially no-op
     ])
-    check_inferred_shape('SimpleRNN, seq=True', locals())
+    check_inferred_shape(model, x, 'SimpleRNN, seq=True')
 
     model = Sequential(
         GRU(23,
@@ -102,7 +100,7 @@ def test_rnn_without_state():
             bidirectional=True),
         Tanh(),
     )
-    check_inferred_shape('GRU, seq=False', locals())
+    check_inferred_shape(model, x, 'GRU, seq=False')
 
     model = Sequential([
         LSTM(23,
@@ -111,7 +109,7 @@ def test_rnn_without_state():
              bidirectional=True),
         nn.ReLU(),
     ])
-    check_inferred_shape('LSTM, seq=True', locals())
+    check_inferred_shape(model, x, 'LSTM, seq=True')
 
 
 def test_rnn_with_state():
@@ -123,10 +121,10 @@ def test_rnn_with_state():
                   return_sequences=True,
                   return_state=True),
     ])
-    check_inferred_shape('SimpleRNN, seq=True', locals())
+    check_inferred_shape(model, x, 'SimpleRNN, seq=True')
     model.add(GetRNNState(mode='concat'))
     model.add(nn.ReLU())
-    check_inferred_shape('SimpleRNN, mode=concat', locals())
+    check_inferred_shape(model, x, 'SimpleRNN, mode=concat')
 
     model = Sequential(
         GRU(23,
@@ -135,12 +133,12 @@ def test_rnn_with_state():
             num_layers=4,
             bidirectional=True),
     )
-    check_inferred_shape('GRU, seq=False', locals())
+    check_inferred_shape(model, x, 'GRU, seq=False')
     model.add([
         GetRNNState(mode='h'),
         nn.ReLU()
     ])
-    check_inferred_shape('GRU, mode=h', locals())
+    check_inferred_shape(model, x, 'GRU, mode=h')
 
     model = Sequential(
         GRU(23,
@@ -151,7 +149,7 @@ def test_rnn_with_state():
         GetRNNOutput(),
         PReLU(shared=False)
     )
-    check_inferred_shape('GRU, output', locals())
+    check_inferred_shape(model, x, 'GRU, output')
 
     model = Sequential([
         LSTM(23,
@@ -160,12 +158,12 @@ def test_rnn_with_state():
              num_layers=3,
              bidirectional=True),
     ])
-    check_inferred_shape('LSTM, seq=True', locals())
+    check_inferred_shape(model, x, 'LSTM, seq=True')
     model.add([
         GetRNNState(mode='c'),
         PReLU()
     ])
-    check_inferred_shape('LSTM, mode=c', locals())
+    check_inferred_shape(model, x, 'LSTM, mode=c')
 
     model = Sequential([
         LSTM(23,
@@ -174,12 +172,12 @@ def test_rnn_with_state():
              num_layers=1,
              bidirectional=True),
     ])
-    check_inferred_shape('LSTM, seq=False', locals())
+    check_inferred_shape(model, x, 'LSTM, seq=False')
     model.add([
         GetRNNState(mode='concat'),
         nn.ReLU()
     ])
-    check_inferred_shape('LSTM, mode=concat', locals())
+    check_inferred_shape(model, x, 'LSTM, mode=concat')
 
 
 def test_time_distributed():
@@ -199,20 +197,20 @@ def test_time_distributed():
         nn.LeakyReLU(0.3),
     )
 
-    check_inferred_shape('TimeDistributed conv', locals())
+    check_inferred_shape(model, x, 'TimeDistributed conv')
 
     model.add(
         MaxPool2d(kernel_size=(5, 3),
                   stride=(3, 2)),
     )
-    check_inferred_shape('TimeDistributed conv add again', locals())
+    check_inferred_shape(model, x, 'TimeDistributed conv add again')
 
     model.add(Sequential(
         Flatten(),
         nn.ELU(),
         Dense(47)
     ))
-    check_inferred_shape('TimeDistributed flattened', locals())
+    check_inferred_shape(model, x, 'TimeDistributed flattened')
 
     # ---------------- Combine with RNN -----------------
     time_distributed_layer = model
@@ -229,7 +227,7 @@ def test_time_distributed():
              return_sequences=True,
              return_state=True)
     ])
-    check_inferred_shape('TimeDistributed+LSTM', locals())
+    check_inferred_shape(model, x, 'TimeDistributed+LSTM')
 
     model.add(
         GetRNNOutput(),
@@ -240,7 +238,7 @@ def test_time_distributed():
         ]),
         nn.ReLU(),
     )
-    check_inferred_shape('TimeDistributed again', locals())
+    check_inferred_shape(model, x, 'TimeDistributed again')
 
     model.add(Sequential(
         TimeDistributed([
@@ -255,7 +253,7 @@ def test_time_distributed():
         GetRNNState(mode='concat'),
         Flatten(),
     ))
-    check_inferred_shape('TimeDistributed final state concat', locals())
+    check_inferred_shape(model, x, 'TimeDistributed final state concat')
 
 
 # run_all_tests(globals())

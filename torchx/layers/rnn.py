@@ -93,7 +93,7 @@ class RNNBase(Layer):
         Returns:
             tuple (output, H, C) if return_state=True
         """
-        assert len(input_shape) == 3
+        assert len(input_shape) == 3, input_shape
         batch_size, seq_len, _ = input_shape
         num_directions = 2 if self.bidirectional else 1
         out_features = self.hidden_size * num_directions

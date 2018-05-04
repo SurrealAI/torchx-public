@@ -3,17 +3,6 @@ from .base import get_torch_builtin_modules, Layer
 from .container import Lambda
 
 
-def _generate_code():
-    "generate code for this module"
-    pkg = 'activation'
-    print('#', '='*25, 'generated', '='*25)
-    print('_wrap = Lambda.wrap_same_shape_class\n')
-    for cls_name in get_torch_builtin_modules(pkg):
-        if cls_name in ['PReLU']:
-            continue
-        print(cls_name, '=', "_wrap(_builtin.{0})".format(cls_name))
-
-
 # PReLU has learnable parameters that change with upsteam shape
 class PReLU(Layer):
     def __init__(self, shared=True, init=0.25):
@@ -41,6 +30,17 @@ class PReLU(Layer):
 
     def get_output_shape(self, input_shape):
         return input_shape
+
+
+def _generate_code():
+    "generate code for this module"
+    pkg = 'activation'
+    print('#', '='*25, 'generated', '='*25)
+    print('_wrap = Lambda.wrap_same_shape_class\n')
+    for cls_name in get_torch_builtin_modules(pkg):
+        if cls_name in ['PReLU']:
+            continue
+        print(cls_name, '=', "_wrap(_builtin.{0})".format(cls_name))
 
 
 # ========================= generated =========================

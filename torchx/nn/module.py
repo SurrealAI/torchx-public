@@ -94,9 +94,17 @@ class Module(nn.Module, SaveInitArgs):
         self.load_state_dict(save_dict['torch'])
 
     @classmethod
-    def class_load(cls, fname):
+    def load_with_init(cls, fname):
+        """
+        Also load the saved constructor arguments
+        """
         save_dict = torch.load(os.path.expanduser(fname))
-        net = cls(**save_dict['init_args'])
+        init_args = save_dict['init_args']
+        if init_args is None:
+            raise ValueError('init_args not saved. '
+             'This happens when the layer __init__() accepts special things like *args.'
+             ' Please manually instantiate the object and use self.load() instead')
+        net = cls(**init_args)
         net.load_state_dict(save_dict['torch'])
         return net
 
