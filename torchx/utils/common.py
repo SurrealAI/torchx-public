@@ -184,7 +184,10 @@ class SaveInitArgsMeta(type):
 
     def __call__(cls, *args, **kwargs):
         obj = super().__call__(*args, **kwargs)
-        obj._init_args = _get_bound_args(obj.__init__, *args, **kwargs)
+        try:
+            obj._init_args = _get_bound_args(obj.__init__, *args, **kwargs)
+        except TypeError:  # __init__ has special stuff like *args
+            obj._init_args = None
         return obj
 
 

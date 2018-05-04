@@ -61,8 +61,11 @@ class Lambda(Layer):
 
 
 class Sequential(Layer):
+    @U.method_decorator(U.enable_varargs)
     def __init__(self, layer_list):
         """
+        Args:
+            layer_list: accepts both a single list or *args
         """
         super().__init__()
         assert len(layer_list) >= 1
@@ -83,6 +86,7 @@ class Sequential(Layer):
             # first layer in Sequential must have input_shape != None
             return Lambda(layer, get_output_shape=None)
 
+    @U.method_decorator(U.enable_varargs)
     def add(self, layers):
         """
         Args:
@@ -112,6 +116,16 @@ class Sequential(Layer):
         for layer in self.layer_list:
             input_shape = layer.get_output_shape(input_shape)
         return input_shape
+
+    @classmethod
+    def create(cls, spec_list):
+        """
+        spec must be a list, each entry follows the semantics in `Layer.create`
+        """
+        assert isinstance(spec_list, (list, tuple))
+        return cls([
+            super().create(spec) for spec in spec_list
+        ])
 
 
 class TimeDistributed(Sequential):

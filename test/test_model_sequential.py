@@ -27,13 +27,13 @@ def test_dense_sequential():
     input_shape = (12, 37)
     x = new_tensor(input_shape)
 
-    model = Sequential([
+    model = Sequential(
         Dense(93),
         nn.ReLU(),  # builtin pytorch, will be auto-wrapped into torchx.Layer
         Dense(42),
         LeakyReLU(0.1),  # torchx.layers
         Dense(77)
-    ])
+    )
     check_inferred_shape('dense', locals())
 
 
@@ -58,7 +58,7 @@ def test_conv_sequential():
     ])
     check_inferred_shape('conv before flatten', locals())
 
-    model.add([
+    model.add(
         Conv2d(5,
                kernel_size=(15, 11),
                stride=2,
@@ -70,7 +70,7 @@ def test_conv_sequential():
                   padding=1),
         ELU(),
         Flatten(),
-    ])
+    )
     check_inferred_shape('conv after flatten', locals())
 
     model.add(Sequential([
@@ -95,13 +95,13 @@ def test_rnn_without_state():
     ])
     check_inferred_shape('SimpleRNN, seq=True', locals())
 
-    model = Sequential([
+    model = Sequential(
         GRU(23,
             return_sequences=False,
             num_layers=2,
             bidirectional=True),
         Tanh(),
-    ])
+    )
     check_inferred_shape('GRU, seq=False', locals())
 
     model = Sequential([
@@ -128,13 +128,13 @@ def test_rnn_with_state():
     model.add(nn.ReLU())
     check_inferred_shape('SimpleRNN, mode=concat', locals())
 
-    model = Sequential([
+    model = Sequential(
         GRU(23,
             return_sequences=False,
             return_state=True,
             num_layers=4,
             bidirectional=True),
-    ])
+    )
     check_inferred_shape('GRU, seq=False', locals())
     model.add([
         GetRNNState(mode='h'),
@@ -142,7 +142,7 @@ def test_rnn_with_state():
     ])
     check_inferred_shape('GRU, mode=h', locals())
 
-    model = Sequential([
+    model = Sequential(
         GRU(23,
             return_sequences=True,
             return_state=True,
@@ -150,7 +150,7 @@ def test_rnn_with_state():
             bidirectional=True),
         GetRNNOutput(),
         PReLU(shared=False)
-    ])
+    )
     check_inferred_shape('GRU, output', locals())
 
     model = Sequential([
@@ -186,7 +186,7 @@ def test_time_distributed():
     input_shape = (10, 8, 3, 64, 32)  # batch_size, seq_len, image CxHxW
     x = new_tensor(input_shape)
 
-    model = TimeDistributed([
+    model = TimeDistributed(
         Conv2d(4,
                kernel_size=(5, 3),
                dilation=2,
@@ -197,7 +197,7 @@ def test_time_distributed():
                stride=(2, 1),
                padding=10),
         nn.LeakyReLU(0.3),
-    ])
+    )
 
     check_inferred_shape('TimeDistributed conv', locals())
 
@@ -207,11 +207,11 @@ def test_time_distributed():
     )
     check_inferred_shape('TimeDistributed conv add again', locals())
 
-    model.add(Sequential([
+    model.add(Sequential(
         Flatten(),
         nn.ELU(),
         Dense(47)
-    ]))
+    ))
     check_inferred_shape('TimeDistributed flattened', locals())
 
     # ---------------- Combine with RNN -----------------
@@ -231,7 +231,7 @@ def test_time_distributed():
     ])
     check_inferred_shape('TimeDistributed+LSTM', locals())
 
-    model.add([
+    model.add(
         GetRNNOutput(),
         TimeDistributed([
             Dense(11),
@@ -239,10 +239,10 @@ def test_time_distributed():
             Dense(51),
         ]),
         nn.ReLU(),
-    ])
+    )
     check_inferred_shape('TimeDistributed again', locals())
 
-    model.add(Sequential([
+    model.add(Sequential(
         TimeDistributed([
             Dense(61),
             nn.Sigmoid(),
@@ -254,7 +254,7 @@ def test_time_distributed():
              bidirectional=True),
         GetRNNState(mode='concat'),
         Flatten(),
-    ]))
+    ))
     check_inferred_shape('TimeDistributed final state concat', locals())
 
 
