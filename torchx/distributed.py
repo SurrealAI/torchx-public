@@ -1,3 +1,13 @@
+"""
+https://pytorch.org/docs/stable/distributed.html
+https://pytorch.org/docs/stable/data.html#torch.utils.data.distributed.DistributedSampler
+https://pytorch.org/docs/stable/distributed.html#launch-utility
+
+Complete working example:
+https://github.com/pytorch/examples/blob/master/imagenet/main.py
+
+Wrapper around nn.DataParallel and nn.parallel.DistributedDataParallel
+"""
 import torch
 import torch.nn as nn
 from .device import device_to_int, get_torchx_device_dtype
