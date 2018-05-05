@@ -1,5 +1,7 @@
 """
-torchx.nn.Module and torchx.nn.DataParallel
+torchx.nn.Module and torchx.DataParallel
+
+Cannot call this with Pytest because there will be multiprocessing.
 """
 from test.utils import *
 import multiprocessing as mp
@@ -13,7 +15,7 @@ class MyNet(nnx.Module):
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         # self.fc2 = nn.DataParallel(self.fc2)
-        self.fc2 = nnx.DataParallel(self.fc2)
+        self.fc2 = tx.DataParallel(self.fc2)
         self.fc3 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
@@ -69,8 +71,3 @@ def mytest_data_parallel(devices):
             else:
                 assert actual_mem == 0, ('device', i, actual_mem)
 
-
-for d in TEST_DEVICES:
-    p = mp.Process(target=mytest_data_parallel, args=(d,))
-    p.start()
-    p.join()
