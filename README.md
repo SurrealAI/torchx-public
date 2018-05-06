@@ -92,6 +92,12 @@ print(y.size())  # (8, 10)
 
 No sweat! 
 
+## Layer serialization
+
+TODO: explain more
+
+Each TorchX Layer implements `to_spec()` and `from_spec()` that dumps and constructs a layer from dict. You can specify a new model architecture easily with a JSON/YAML file. 
+
 ## TorchX Functional API
 
 Now we want to define more complex connectivity than `nn.Sequential`, such as multi-input multi-output models, directed acyclic graphs, or models with shared layers. In standard PyTorch, you typically have to follow 3 steps:
@@ -216,7 +222,7 @@ Use `torchx.device_scope(device_id)` context manager.
 - `int >= 0`: single GPU index
 - `-1`: CPU
 - `"cuda:<n>"`: single GPU at index `n`
-- `"gpu:<n>"`: single GPU at index `n`
+- `"gpu:<n>"`: single GPU at index `n`, alias of `cuda:<n>`
 - `"cpu"`: CPU
 - list of ints, e.g. `[0, 3, 5]`: distribute `torchx.DataParallel` over multiple GPUs at index 0, 3, and 5. More about this later.
 - `"cuda:all"`: distribute `torchx.DataParallel` over all available GPUs on your machine. 
