@@ -27,6 +27,7 @@ CUDA_DEVICE = torch.device('cuda')  # typically GPU #0
 
 
 cuda_count = torch.cuda.device_count
+gpu_count = torch.cuda.device_count
 
 has_cuda = torch.cuda.is_available
 

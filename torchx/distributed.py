@@ -65,11 +65,12 @@ class DistributedManager:
                  master_port=23333):
         """
         https://github.com/pytorch/pytorch/blob/master/torch/distributed/launch.py
+        Uses the `env://` init method only.
 
         Run your main script with `-h` to show
 
         Args:
-            backend: "gloo" or "nccl"
+            backend
             num_procs: number of processes *per node*
             num_nodes:
             node_rank:
