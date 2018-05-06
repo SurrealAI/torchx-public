@@ -27,18 +27,14 @@ import torch.nn.functional as F
 import torchx as tx
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--local_rank', type=int)
-args = parser.parse_args()
-
-
-# WARNING: `gloo` backend will print error msg that wouldn't affect runtime
-# https://github.com/pytorch/pytorch/issues/2530
-dist.init_process_group(
-    backend='nccl',
-    # world_size=4,
+manager = tx.DistributedManager(
+    'nccl',
+    num_procs=4,  # number of procs per node (1 node here)
 )
+manager.entry()
 
+local_rank = manager.local_rank()
+print('LOCAL_RANK', local_rank)
 
 # when False, you will see the gradient to be different for each process
 DISTRIBUTED = True
@@ -72,15 +68,16 @@ class MyNet(nn.Module):
 
 INPUT_SIZE = (16, 10)
 
-with tx.device_scope(args.local_rank):
-    fill_value = 1. * (args.local_rank + 1)
+
+with tx.device_scope(local_rank):
+    fill_value = 1. * (local_rank + 1)
     x = torch.empty(0).new_full(INPUT_SIZE, fill_value)
     model = MyNet(10, 7, 5)
     if DISTRIBUTED:
         model = nn.parallel.DistributedDataParallel(
             model,
-            device_ids=[args.local_rank],
-            output_device=args.local_rank
+            device_ids=[local_rank],
+            output_device=local_rank
         )
     y = model(x)
     y.backward(torch.ones_like(y))
