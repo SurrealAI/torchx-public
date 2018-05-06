@@ -31,7 +31,7 @@ class MaxPoolNd(Layer):
             **self.pool_kwargs
         )
 
-    def get_native(self):
+    def native_module(self):
         return self._pool
 
 

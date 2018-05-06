@@ -36,7 +36,7 @@ class ConvNd(Layer):
             **self.conv_kwargs
         )
 
-    def get_native(self):
+    def native_module(self):
         return self._conv
 
 
@@ -89,7 +89,7 @@ class ConvTransposeNd(Layer):
             **self.conv_kwargs
         )
 
-    def get_native(self):
+    def native_module(self):
         return self._conv
 
 

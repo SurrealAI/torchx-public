@@ -21,7 +21,7 @@ class Linear(Layer):
     def get_output_shape(self, input_shape):
         return (*input_shape[:-1], self.out_features)
 
-    def get_native(self):
+    def native_module(self):
         return self._fc
 
 

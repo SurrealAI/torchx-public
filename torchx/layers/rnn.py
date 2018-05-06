@@ -112,7 +112,7 @@ class RNNBase(Layer):
         else:
             return output_shape
 
-    def get_native(self):
+    def native_module(self):
         return self._rnn
 
 

@@ -31,7 +31,7 @@ class Lambda(Layer):
     def _build(self, input_shape):
         pass
 
-    def get_native(self):
+    def native_module(self):
         if isinstance(self._lambda_forward, nn.Module):
             return self._lambda_forward
         else:
@@ -122,8 +122,8 @@ class Sequential(Layer):
             input_shape = layer.get_output_shape(input_shape)
         return input_shape
 
-    def get_native(self):
-        natives = [layer.get_native() for layer in self.layer_list]
+    def native_module(self):
+        natives = [layer.native_module() for layer in self.layer_list]
         return [x for x in natives if x is not None]
 
     @classmethod
@@ -300,8 +300,8 @@ class Functional(Layer):
     def get_output_shape(self, input_shape):
         return self.outputs.get_shape()
 
-    def get_native(self):
-        natives = [layer.get_native() for layer in self.module_list]
+    def native_module(self):
+        natives = [layer.native_module() for layer in self.module_list]
         return [x for x in natives if x is not None]
 
     @classmethod

@@ -46,7 +46,7 @@ class Layer(Module, metaclass=_LayerMeta):
     def get_output_shape(self, input_shape):
         raise NotImplementedError
 
-    def get_native(self):
+    def native_module(self):
         """
         Returns:
             underlying native torch.nn.Module or a list/dict of nn.Module

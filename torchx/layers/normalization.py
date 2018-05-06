@@ -45,7 +45,7 @@ class BatchNormNd(Layer):
     def get_output_shape(self, input_shape):
         return input_shape
     
-    def get_native(self):
+    def native_module(self):
         return self._normalizer
 
 
@@ -110,7 +110,7 @@ class InstanceNormNd(Layer):
     def get_output_shape(self, input_shape):
         return input_shape
     
-    def get_native(self):
+    def native_module(self):
         return self._normalizer
 
 
@@ -174,7 +174,7 @@ class LayerNorm(Layer):
     def get_output_shape(self, input_shape):
         return input_shape
 
-    def get_native(self):
+    def native_module(self):
         return self._normalizer
 
 
@@ -214,7 +214,7 @@ class GroupNorm(Layer):
     def get_output_shape(self, input_shape):
         return input_shape
 
-    def get_native(self):
+    def native_module(self):
         return self._normalizer
 
 
