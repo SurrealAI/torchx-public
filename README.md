@@ -176,17 +176,19 @@ The functional API makes updating architecture so much easier. Let's repeat the 
 To change the output channel of `branch1` to 20, you only need to touch one line:
 
 ```python
-xp = L.Conv2d(20, kernel_size=5, stride=2)(xp_input)  # only change
-branch1 = L.Conv2d(30, kernel_size=7, padding=2)(xp)  # exactly the same as before
-branch2 = L.Conv2d(30, kernel_size=5, padding=1)(xp)  # same
+xp = L.Conv2d(20, kernel_size=5, stride=2)(xp_input)  # change 10 to 20
+branch1 = L.Conv2d(30, kernel_size=7, padding=2)(xp)  # unchanged
+branch2 = L.Conv2d(30, kernel_size=5, padding=1)(xp)  # unchanged
 ```
 
 To add another FC layer between `fc1` and `fc2`, just add one line:
 ```python
-xp = L.Linear(80)(xp)  # same as before
-xp = L.Linear(50)(xp)  # add a Linear layer of 50 hidden units
-xp = L.Linear(10)(xp)  # same
+xp = L.Linear(80)(xp)  # unchanged
+xp = L.Linear(50)(xp)  # added line: Linear layer of 50 hidden units
+xp = L.Linear(10)(xp)  # unchanged
 ```
+
+The functional model is also a subclass of `nn.Module`, so it plays well with your regular pytorch code. You can stuff it into a regular `nn.Module` definition; it will have all the learnable parameters properly registered. 
 
 
 ## Non-standard layers
@@ -203,3 +205,64 @@ The input should be at least 3D, and the dimension at index one will be consider
 
 TODO
 
+# TorchX GPU and Distributed
+
+## GPU scoping
+
+Use `torchx.device_scope(device_id)` context manager. 
+
+`device_id` can be any of the following:
+
+- `int >= 0`: single GPU index
+- `-1`: CPU
+- `"cuda:<n>"`: single GPU at index `n`
+- `"gpu:<n>"`: single GPU at index `n`
+- `"cpu"`: CPU
+- list of ints, e.g. `[0, 3, 5]`: distribute `torchx.DataParallel` over multiple GPUs at index 0, 3, and 5. More about this later.
+- `"cuda:all"`: distribute `torchx.DataParallel` over all available GPUs on your machine. 
+
+All PyTorch constructor functions within the scope will create tensors on the designated device. Examples are `torch.zeros`, `torch.ones_like`, `<mytensor>.new_zeros()`.
+
+```python
+import torchx as tx
+
+with tx.device_scope(2):
+    torch.zeros((3, 6))  # on GPU 2 
+    
+with tx.device_scope('gpu:2'):
+    torch.empty(0).new_ones((3, 6))  # on GPU 2 
+    
+with tx.device_scope(-1):
+    torch.ones((3, 6))  # on CPU
+```
+
+## torchx.nn.Module
+
+TorchX provides `torchx.nn.Module` inherits from the standard `nn.Module`. It is a strict superset of features compared to `nn.Module`. Besides providing convenient methods like `.clip_grad_value()` and `.soft_update()`, TorchX Modules are also aware of `torchx.device_scope`. When you call the module (upon `__call__`) on an input tensor, the module will transfer itself to the current device in scope. Standard `nn.Module` cannot do that. 
+
+```python
+import torchx as tx
+import torch.nn as nn  # builtin
+import torchx.nn as nnx
+
+# use it the same way as nn.Module
+class MyModel(nnx.Module):
+    def __init__(self):
+        self.fc1 = nn.Linear(10, 20)
+        self.fc2 = nn.Linear(20, 30)
+    
+    def forward(self, x):
+        return self.fc2(self.fc1(x))
+        
+
+with tx.device_scope(3):
+    x = torch.zeros((4, 10))  # on GPU 3
+    model = MyModel()  # still on CPU
+    y = model(x)  # this call automatically transfers model to GPU 3
+    print(y)  # shape (4, 30), on GPU 3
+```
+
+
+## DataParallel
+
+TODO
