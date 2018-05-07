@@ -1,16 +1,12 @@
 """
-DistributedDataParallel
-
-Run with the new torch.distributed.launch util introduced in v0.4
-https://pytorch.org/docs/stable/distributed.html#launch-utility
-https://github.com/pytorch/pytorch/blob/master/torch/distributed/launch.py
+DistributedDataParallel with TorchX DistributedManager
 
 Warnings:
 If you run with `gloo` backend, you'll see this issue
 https://github.com/pytorch/pytorch/issues/2530
 It doesn't affect runtime but prints error msg
 
-python -m torch.distributed.launch --nproc_per_node=4 demo_ddp.py
+python tx_dist_data_parallel.py
 
 DatasetSampler for DDP:
 https://pytorch.org/docs/stable/data.html#torch.utils.data.distributed.DistributedSampler
@@ -34,10 +30,10 @@ manager = tx.DistributedManager(
 manager.entry()
 
 local_rank = manager.local_rank()
-print('LOCAL_RANK', local_rank)
+
 
 # when False, you will see the gradient to be different for each process
-DISTRIBUTED = True
+DISTRIBUTED = 1
 weights = []
 
 
@@ -68,17 +64,12 @@ class MyNet(nn.Module):
 
 INPUT_SIZE = (16, 10)
 
-
-with tx.device_scope(local_rank):
+with manager.device_scope():
     fill_value = 1. * (local_rank + 1)
     x = torch.empty(0).new_full(INPUT_SIZE, fill_value)
     model = MyNet(10, 7, 5)
     if DISTRIBUTED:
-        model = nn.parallel.DistributedDataParallel(
-            model,
-            device_ids=[local_rank],
-            output_device=local_rank
-        )
+        model = tx.DistributedDataParallel(model)
     y = model(x)
     y.backward(torch.ones_like(y))
 

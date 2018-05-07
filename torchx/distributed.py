@@ -15,7 +15,8 @@ import subprocess
 import torch
 import torch.nn as nn
 import torch.distributed
-from .device import device_to_int, get_torchx_device_dtype
+import contextlib
+import torchx.device as _txd
 
 
 def DataParallel(module, output_device=None, dim=0):
@@ -23,11 +24,11 @@ def DataParallel(module, output_device=None, dim=0):
     Reads the device from torchx.device_scope()
     If the device in scope is CPU, this wrapper will be no op.
     """
-    devices, dtype = get_torchx_device_dtype()
+    devices, dtype = _txd.get_torchx_device_dtype()
     if devices[0] == torch.device('cpu'):
         return module
     else:
-        device_ids = [device_to_int(dev) for dev in devices]
+        device_ids = [_txd.device_to_int(dev) for dev in devices]
         return nn.DataParallel(
             module,
             device_ids=device_ids,
@@ -38,19 +39,39 @@ def DataParallel(module, output_device=None, dim=0):
 
 def DistributedDataParallel(module, dim=0):
     """
-    https://pytorch.org/docs/stable/nn.html#distributeddataparallel
-
-    Launch util (v0.4)
+    Launch utility (v0.4)
     https://pytorch.org/docs/stable/distributed.html#launch-utility
     https://github.com/pytorch/pytorch/blob/master/torch/distributed/launch.py
 
+    DistributedDataParallel (GPU)
+    https://pytorch.org/docs/stable/nn.html#distributeddataparallel
+
+    DistributedDataParallelCPU (CPU)
+    https://github.com/pytorch/pytorch/blob/master/torch/nn/parallel/distributed_cpu.py
+
     Warnings:
-        ONLY works with `gloo` and `nccl` backend.
+        GPU mode only works with `gloo` and `nccl` backend,
+        CPU mode only works with `mpi`, `tcp`, and `gloo` backend,
         If you run with `gloo` backend, you'll see this issue
         https://github.com/pytorch/pytorch/issues/2530
         It doesn't affect the result at all but prints error messages.
     """
-    pass
+    devices, dtype = _txd.get_torchx_device_dtype()
+    assert len(devices) == 1, \
+        'DistributedDataParallel should work with only one device in scope. ' \
+        'Please use either torchx.DataParallel or enclose in the context manager ' \
+        '`DistributedManager.device_scope()` instead.'
+    device = devices[0]
+    if device == torch.device('cpu'):
+        return nn.parallel.DistributedDataParallelCPU(module)
+    else:
+        device_id = _txd.device_to_int(device)
+        return nn.parallel.DistributedDataParallel(
+            module,
+            device_ids=[device_id],
+            output_device=device_id,
+            dim=dim
+        )
 
 
 class DistributedManager:
@@ -170,4 +191,4 @@ class DistributedManager:
         return int(os.environ[self.LOCAL_RANK_ENV_NAME])
 
     def device_scope(self):
-        pass
+        return _txd.device_scope(self.local_rank())
