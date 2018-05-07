@@ -142,9 +142,9 @@ print(y.size())  # (8, 10)
 
 Now let's attempt to tune the architecture.
 
-Suppose you want to change the output channel of `conv1` to 20, you will have to change _three_ places in the code: `conv1`'s output channel, `conv2_1`'s input channel, and `conv2_2`'s input channel. 
+Suppose you want to change the output channel of `conv1` to 20, you will have to change _three_ places in the code: (1) `conv1`'s output channel, (2) `conv2_1`'s input channel, and (3) `conv2_2`'s input channel. 
 
-To add another FC layer between `fc1` and `fc2`, you will have to change _four_ places: `fc1`'s output dim, `fc2`'s input dim, define a new `fc3` in `__init__`, and finally add `x = self.fc3(x)` to `forward()`.
+To add another FC layer between `fc1` and `fc2`, you will have to change _four_ places: (1) `fc1`'s output dim, (2) `fc2`'s input dim, (3) define a new `fc3` in `__init__`, and (4) add `x = self.fc3(x)` to `forward()`.
 
 Because the module definitions and their connectivity are decoupled, you will have to scroll back and forth between `__init__` and `forward` to know what exactly are `conv2_1` and `fc3`. This is not a problem here, but would be a headache in bigger modules that span hundreds of lines. 
 

@@ -30,6 +30,7 @@ cuda_count = torch.cuda.device_count
 gpu_count = torch.cuda.device_count
 
 has_cuda = torch.cuda.is_available
+has_gpu = torch.cuda.is_available
 
 
 def cuda_memory(ids, unit='b', mode='alloc', is_max=False):

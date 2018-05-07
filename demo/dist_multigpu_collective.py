@@ -1,11 +1,11 @@
 """
-Demo TCP backend point-to-point distributed communication
+Demo v0.4 NCCL multi-GPU collectives
+https://pytorch.org/docs/stable/distributed.html#multi-gpu-collective-functions
 https://pytorch.org/docs/stable/distributed.html
 """
 import torch
 import torch.distributed as dist
 import torchx as tx
-import time
 
 assert tx.gpu_count() >= 4, 'example only runs on >= 4 GPUs'
 
@@ -26,17 +26,19 @@ SHAPE = (2, 3)
 
 # each tensor in the list from *each* process must reside on different GPUs
 if local_rank == 0:
-    gpu_ids = [0, 1]  # mean 1.0, mean 2.0
+    local_gpu_ids = [0, 1]  # mean 1.0, mean 2.0
 else:
-    gpu_ids = [2, 3] # mean 4.0, mean 4.0
+    local_gpu_ids = [2, 3] # mean 3.0, mean 4.0
+
+
+def new_tensor(device_id, value):
+    with tx.device_scope(device_id, dtype=torch.float64):
+        return torch.ones(SHAPE) * value
 
 
 def get_tensor_list():
-    tensor_list = []
-    for device_id in gpu_ids:
-        with tx.device_scope(device_id, dtype=torch.float64):
-            tensor_list.append(torch.ones(SHAPE) * (device_id + 1))
-    return tensor_list
+    return [new_tensor(device_id, value=device_id+1)
+            for device_id in local_gpu_ids]
 
 # ---------------- ALL_REDUCE -----------------
 tensor_list = get_tensor_list()
@@ -90,16 +92,32 @@ else:
     assert_mean(tensor_list[1], 3.)
 
 # ---------------- ALL_GATHER -----------------
+# all_gather semantics is quite complicated:
+# https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_multigpu
+
 tensor_list = get_tensor_list()
 
-dist.broadcast_multigpu(
+"""
+Process 0: physical GPU 0, 1, output list device residence 
+    [[gpu0, gpu0, gpu0, gpu0], [gpu1, gpu1, gpu1, gpu1]]
+    values [[1., 2., 3., 4.], [1., 2., 3., 4.]]  from all GPUs across all procs
+Process 1: physical GPU 2, 3, output list device residence 
+    [[gpu2, gpu2, gpu2, gpu2], [gpu3, gpu3, gpu3, gpu3]]
+    values [[1., 2., 3., 4.], [1., 2., 3., 4.]]  from all GPUs across all procs
+"""
+output_tensor_lists = [[new_tensor(i, value=0.) for _ in range(4)]
+                       for i in local_gpu_ids]
+
+dist.all_gather_multigpu(
+    output_tensor_lists,
     tensor_list,
-    src=1,  # rank 1 tensor_list[0] broadcast to all
 )
-print('{} AFTER broadcast_multigpu {}'.format(local_rank, tensor_list))
-if local_rank == 0:
-    assert_mean(tensor_list[0], 3.)
-    assert_mean(tensor_list[1], 3.)
-else:
-    assert_mean(tensor_list[0], 3.)
-    assert_mean(tensor_list[1], 3.)
+print('all_gather_multigpu rank '+str(local_rank) + '\n'
+      + '\n\t'.join(map(str, output_tensor_lists)) )
+
+for same_gpu_tensor_list in output_tensor_lists:
+    assert_mean(same_gpu_tensor_list[0], 1.)
+    assert_mean(same_gpu_tensor_list[1], 2.)
+    assert_mean(same_gpu_tensor_list[2], 3.)
+    assert_mean(same_gpu_tensor_list[3], 4.)
+
