@@ -24,12 +24,11 @@ import torch.nn as nn
 import torch.distributed as dist
 import torch.nn.functional as F
 
-import torchx as tx
-
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--local_rank', type=int)
+parser.add_argument('--local_rank', type=int)  # required by pytorch launch until
 args = parser.parse_args()
+local_rank = args.local_rank
 
 
 # WARNING: `gloo` backend will print error msg that wouldn't affect runtime
@@ -40,13 +39,10 @@ dist.init_process_group(
 )
 
 
-# when False, you will see the gradient to be different for each process
-DISTRIBUTED = True
-weights = []
-
-
-def get_grad_means():
-    return [w.grad.mean() for w in weights]
+def get_grad_means(net):
+    "returns scalars"
+    return [w.grad.mean() for w
+            in [net.fc1.weight, net.fc2.weight, net.fc3.weight]]
 
 
 class MyNet(nn.Module):
@@ -56,12 +52,6 @@ class MyNet(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         # self.fc2 = nn.parallel.DistributedDataParallel(self.fc2)
         self.fc3 = nn.Linear(hidden_size, output_size)
-        global weights
-        with torch.no_grad():
-            for fc in [self.fc1, self.fc2, self.fc3]:
-                fc.weight.fill_(1.)
-                fc.bias.fill_(0.)
-                weights.append(fc.weight)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -72,20 +62,25 @@ class MyNet(nn.Module):
 
 INPUT_SIZE = (16, 10)
 
-with tx.device_scope(args.local_rank):
+device = torch.device('cuda')
+
+with torch.cuda.device(local_rank):
     fill_value = 1. * (args.local_rank + 1)
-    x = torch.empty(0).new_full(INPUT_SIZE, fill_value)
+    x = torch.empty(0).new_full(INPUT_SIZE, fill_value, device=device)
     model = MyNet(10, 7, 5)
-    if DISTRIBUTED:
-        model = nn.parallel.DistributedDataParallel(
-            model,
-            device_ids=[args.local_rank],
-            output_device=args.local_rank
-        )
-    y = model(x)
+    model = model.to(device)
+    wrapped_model = nn.parallel.DistributedDataParallel(
+        model,
+        device_ids=[args.local_rank],
+        output_device=args.local_rank
+    )
+    y = wrapped_model(x)
     y.backward(torch.ones_like(y))
 
-# when DISTRIBUTED is True, you should see all grad means to be the same value
-print('y', y.size(), 'mean', y.mean(),
-      '\nw_grad', get_grad_means())
+# you should see all grad means to be the same value across different ranks
+print(
+    '\nRank {}\n\ty size {} value {} device {}'
+    '\n\tw_grads {}'
+    .format(local_rank, y.size(), y.mean(), y.device, get_grad_means(model))
+)
 

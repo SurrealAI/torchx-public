@@ -15,7 +15,6 @@ import subprocess
 import torch
 import torch.nn as nn
 import torch.distributed
-import contextlib
 import torchx.device as _txd
 
 
@@ -128,8 +127,8 @@ class DistributedManager:
             help="Master node (rank 0)'s free port that needs to "
                  "be used for communciation during distributed training"
         )
-        self.parser = parser
-        self.backend = backend.lower()
+        self.set_backend(backend)
+        self._parser = parser
         self._default_dist_config = {
             'num_procs': num_procs,
             'num_nodes': num_nodes,
@@ -137,16 +136,40 @@ class DistributedManager:
             'master_addr': master_addr,
             'master_port': master_port
         }
+        self._parsed_args = None
+        self._is_entry_called = False
 
-    def get_parser(self):
-        return self.parser
+    def set_backend(self, backend):
+        self.backend = backend.lower() if backend else backend
+
+    def _assert_after_entry(self, method_name):
+        "certain methods should only be called after manager.entry()"
+        if not self._is_entry_called:
+            raise RuntimeError('{}() should be called after manager.entry()'
+                               .format(method_name))
+
+    @property
+    def parser(self):
+        """
+        Add your own command line arguments to the manager's parser
+        """
+        return self._parser
+
+    def parse_args(self):
+        if self._parsed_args is None:
+            self._parsed_args = self._parser.parse_args()
+        return self._parsed_args
 
     def _worker_setup(self):
         torch.distributed.init_process_group(self.backend)
 
     def entry(self):
         """
+        Actual process code should be placed after entry()
         """
+        self._is_entry_called = True
+        args = self.parse_args()
+
         # DistributedManager master proc will set an env variable for worker proc
         # if this variable doesn't exist, that means it's the master proc
         # otherwise it's worker process, entry() will be no-op
@@ -158,8 +181,6 @@ class DistributedManager:
 
         # entering master proc
         # master proc will launch worker procs using `subprocess`
-        args = self.parser.parse_args()
-
         # world size in terms of number of processes
         dist_world_size = args.num_procs * args.num_nodes
 
@@ -188,7 +209,15 @@ class DistributedManager:
         sys.exit(0)  # master proc exit without proceeding
 
     def local_rank(self):
+        self._assert_after_entry('local_rank')
         return int(os.environ[self.LOCAL_RANK_ENV_NAME])
 
-    def device_scope(self):
-        return _txd.device_scope(self.local_rank())
+    def device_scope(self, use_cpu=False):
+        """
+        Args:
+            use_cpu (bool): if True, use DistributedDataParallelCPU
+                if False, you must have CUDA device available on your machine.
+        """
+        self._assert_after_entry('device_scope')
+        device_id = 'cpu' if use_cpu else self.local_rank()
+        return _txd.device_scope(device_id)
