@@ -44,7 +44,7 @@ class Module(nn.Module, SaveInitArgs):
     def soft_update(self, other_module, tau):
         th_soft_update(target=self, source=other_module, tau=tau)
 
-    def hard_update(self, other_module, tau):
+    def hard_update(self, other_module):
         th_hard_update(target=self, source=other_module)
 
     def clip_grad_value(self, max_value):
