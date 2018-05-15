@@ -170,6 +170,21 @@ def get_torchx_device_dtype():
         return [device], dtype
 
 
+def new_tensor(data):
+    """
+    Warnings:
+        the builtin `torch.tensor` does NOT work with TorchX device scope!
+        This is an inconsistency on pytorch's side.
+        Please use `torchx.new_tensor` as a workaround. It will correctly
+        send your list or numpy data to the CUDA device.
+
+    Args:
+        data: convert data to torch tensor. Can be a list, tuple,
+            numpy ndarray, scalar, and other types.
+    """
+    return torch.empty(0).new_tensor(data)
+
+
 @contextlib.contextmanager
 def device_scope(device, dtype=torch.float32, override_parent=True):
     """
