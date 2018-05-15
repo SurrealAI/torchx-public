@@ -17,6 +17,9 @@ def _check_scope(correct_device, correct_dtype):
     x = torch.randn((2, 3))
     assert x.device == correct_device
     assert x.dtype == correct_dtype
+    x = tx.new_tensor(np.ones((4, 4)))
+    assert x.device == correct_device
+    assert x.dtype == correct_dtype
 
 
 def test_default_device_dtype():

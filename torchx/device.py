@@ -170,7 +170,7 @@ def get_torchx_device_dtype():
         return [device], dtype
 
 
-def new_tensor(data):
+def new_tensor(data, dtype=None):
     """
     Warnings:
         the builtin `torch.tensor` does NOT work with TorchX device scope!
@@ -181,8 +181,10 @@ def new_tensor(data):
     Args:
         data: convert data to torch tensor. Can be a list, tuple,
             numpy ndarray, scalar, and other types.
+        dtype: None to use device_scope dtype. Note that it will auto-cast
+            your numpy data to the torch dtype.
     """
-    return torch.empty(0).new_tensor(data)
+    return torch.empty(0).new_tensor(data, dtype=dtype)
 
 
 @contextlib.contextmanager
