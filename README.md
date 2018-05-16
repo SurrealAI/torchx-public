@@ -123,6 +123,7 @@ class MyModel(nn.Module):
         self.fc2 = nn.Linear(80, 10)
 
     def forward(self, x):
+        # omitting nonlinearities for simplicity
         x = self.conv1(x)
         branch1 = self.conv2_1(x)
         branch2 = self.conv2_2(x)
@@ -159,6 +160,7 @@ xp_input = L.Placeholder((8, 3, 32, 32))
 # definition and connectivity right next to each other!
 # layers take a placeholder and return another placeholder
 xp = L.Conv2d(10, kernel_size=5, stride=2)(xp_input)
+# omitting nonlinearities for simplicity
 branch1 = L.Conv2d(30, kernel_size=7, padding=2)(xp)  # no need to specify input channel
 branch2 = L.Conv2d(30, kernel_size=5, padding=1)(xp)
 xp = branch1 * branch2
@@ -254,10 +256,12 @@ import torchx.nn as nnx
 # use it the same way as nn.Module
 class MyModel(nnx.Module):
     def __init__(self):
+        super().__init__()
         self.fc1 = nn.Linear(10, 20)
         self.fc2 = nn.Linear(20, 30)
     
     def forward(self, x):
+        # omitting nonlinearities for simplicity
         return self.fc2(self.fc1(x))
         
 
