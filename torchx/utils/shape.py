@@ -137,7 +137,10 @@ def shape_slice(input_shape, slice):
     The key is that `.expand()` does not actually allocate memory
     Still needs to allocate a one-element HELPER_TENSOR.
     """
-    return tuple(_HELPER_TENSOR.expand(*input_shape)[slice].size())
+    shape = _HELPER_TENSOR.expand(*input_shape)[slice]
+    if hasattr(shape, 'size'):
+        return tuple(shape.size())
+    return 1,
 
 
 class ShapeSlice:
