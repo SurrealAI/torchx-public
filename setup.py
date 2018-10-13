@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def read(fname):
@@ -17,7 +17,9 @@ setup(
     keywords=['Deep Learning',
               'Machine Learning'],
     license='GPLv3',
-    packages=['torchx'],
+    packages=[
+        package for package in find_packages() if package.startswith("torchx")
+    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
