@@ -220,6 +220,12 @@ def device_scope(device, dtype=torch.float32, override_parent=True):
         - http://pytorch.org/docs/stable/tensor_attributes.html
         - torch.set_default_dtype, torch.set_default_tensor_type
              http://pytorch.org/docs/stable/torch.html#torch.set_default_dtype
+
+    Warnings:
+        NOT thread-safe! If you attempt to launch multiple threads with this
+        context manager, some thread will exit the context earlier than others,
+        which means they will restore the global device variable while others
+        are still creating tensors.
     """
     assert dtype in [torch.float32, torch.float64], 'torch v0.4 restrictions'
     global _PYTORCH_DEVICES_

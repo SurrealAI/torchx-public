@@ -122,3 +122,5 @@ runs/
 temp*
 debug_*
 *.swp
+
+*.rst

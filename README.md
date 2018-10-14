@@ -2,8 +2,7 @@
 
 PyTorch is great. PyTorch on steroids is even better. 
 
-This README is incomplete. I have only documented the most essential features. 
-More to come later.
+THIS DOC IS INCOMPLETE. MORE COMING SOON.
 
 ```
 git clone https://github.com/SurrealAI/TorchX.git torchx
